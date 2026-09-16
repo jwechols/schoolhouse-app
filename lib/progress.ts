@@ -1,8 +1,10 @@
 // ── Universal Progress System ──────────────────────────────────────────────────
 // localStorage key: elc-progress-[kidId]
+// Coins are the household reward. XP is kept as an alias so old saves still load.
 
 export interface KidProgress {
   xp: number;
+  coins: number;
   level: number;
   streak: number;
   lastPracticed: string; // ISO date YYYY-MM-DD
@@ -19,7 +21,6 @@ export interface BadgeDef {
   check: (p: KidProgress) => boolean;
 }
 
-// Level thresholds (XP needed to reach that level)
 const LEVEL_XP = [0, 100, 300, 600, 1000] as const;
 
 export function getLevel(xp: number): number {
@@ -56,6 +57,7 @@ function storageKey(kidId: string) {
 function makeDefault(kidId: string): KidProgress {
   return {
     xp: 0,
+    coins: 0,
     level: 1,
     streak: 0,
     lastPracticed: "",
@@ -71,7 +73,9 @@ export function getProgress(kidId: string): KidProgress {
     const raw = localStorage.getItem(storageKey(kidId));
     if (!raw) return makeDefault(kidId);
     const parsed = JSON.parse(raw) as Partial<KidProgress>;
-    return { ...makeDefault(kidId), ...parsed };
+    const xp = parsed.xp ?? 0;
+    const coins = parsed.coins ?? xp;
+    return { ...makeDefault(kidId), ...parsed, xp, coins };
   } catch {
     return makeDefault(kidId);
   }
@@ -82,11 +86,16 @@ function saveProgress(kidId: string, p: KidProgress): void {
   localStorage.setItem(storageKey(kidId), JSON.stringify(p));
 }
 
+export function addCoins(kidId: string, amount: number): KidProgress {
+  return addXP(kidId, amount);
+}
+
 export function addXP(kidId: string, amount: number): KidProgress {
   const p = getProgress(kidId);
   const newXP = p.xp + amount;
+  const newCoins = (p.coins ?? p.xp) + amount;
   const newLevel = getLevel(newXP);
-  const updated: KidProgress = { ...p, xp: newXP, level: newLevel };
+  const updated: KidProgress = { ...p, xp: newXP, coins: newCoins, level: newLevel };
   saveProgress(kidId, updated);
   return updated;
 }
@@ -117,8 +126,6 @@ export function recordSession(kidId: string, subject: string): KidProgress {
   saveProgress(kidId, updated);
   return updated;
 }
-
-// ── Badges ─────────────────────────────────────────────────────────────────────
 
 export const BADGES: Record<string, BadgeDef> = {
   first_lesson: {
@@ -178,28 +185,28 @@ export const BADGES: Record<string, BadgeDef> = {
     id: "level_2",
     name: "Level 2",
     emoji: "⭐",
-    desc: "Reach Level 2 (100 XP)",
+    desc: "Reach Level 2 (100 coins)",
     check: (p) => p.level >= 2,
   },
   level_3: {
     id: "level_3",
     name: "Level 3",
     emoji: "🌟",
-    desc: "Reach Level 3 (300 XP)",
+    desc: "Reach Level 3 (300 coins)",
     check: (p) => p.level >= 3,
   },
   level_4: {
     id: "level_4",
     name: "Level 4",
     emoji: "🏆",
-    desc: "Reach Level 4 (600 XP)",
+    desc: "Reach Level 4 (600 coins)",
     check: (p) => p.level >= 4,
   },
   level_5: {
     id: "level_5",
     name: "Legend",
     emoji: "👑",
-    desc: "Reach Level 5 (1000 XP)",
+    desc: "Reach Level 5 (1000 coins)",
     check: (p) => p.level >= 5,
   },
   sessions_5: {
