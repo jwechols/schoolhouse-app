@@ -1,4 +1,5 @@
 import MercyDen from "@/components/MercyDen";
+import SchoolhouseHub from "@/components/SchoolhouseHub";
 import { notFound } from "next/navigation";
 
 interface Props {
@@ -8,5 +9,10 @@ interface Props {
 export default async function KidDenPage({ params }: Props) {
   const { kid } = await params;
   if (kid !== "mercy") notFound();
-  return <MercyDen />;
+  return (
+    <>
+      <MercyDen />
+      <SchoolhouseHub kidId="mercy" />
+    </>
+  );
 }
