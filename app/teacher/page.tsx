@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
-import TeacherStation from "@/components/TeacherStation";
+import { redirect } from "next/navigation";
 
 export const metadata: Metadata = { title: "Homeroom | Schoolhouse" };
 
 export default function TeacherPage() {
-  return <TeacherStation />;
+  redirect("/parent");
 }
