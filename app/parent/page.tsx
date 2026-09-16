@@ -4,8 +4,9 @@ import { redirect } from "next/navigation";
 import { supabaseAdmin } from "@/lib/supabase";
 import type { TrumaSession } from "@/lib/supabase";
 import ParentDashboard from "@/components/ParentDashboard";
+import ParentDeskBar from "@/components/ParentDeskBar";
 
-export const metadata: Metadata = { title: "Parent Dashboard | Schoolhouse" };
+export const metadata: Metadata = { title: "Mom desk | Schoolhouse" };
 
 export default async function ParentPage() {
   const cookieStore = await cookies();
@@ -24,5 +25,10 @@ export default async function ParentPage() {
     sessions.push(...((data ?? []) as TrumaSession[]));
   }
 
-  return <ParentDashboard sessions={sessions} />;
+  return (
+    <>
+      <ParentDeskBar />
+      <ParentDashboard sessions={sessions} />
+    </>
+  );
 }
