@@ -1,0 +1,97 @@
+# ══════════════════════════════════════════════════════════════════
+# Echols Learing Center — Home Assistant Helpers
+# Paste into Settings → Devices & Services → Helpers
+# (or add to configuration.yaml under input_number / input_boolean)
+# ══════════════════════════════════════════════════════════════════
+
+input_number:
+  # ── Coin balances (updated by webhook when kids earn) ──────────
+  titus_coins:
+    name: "Titus — Coin Balance"
+    min: 0
+    max: 9999
+    step: 1
+    mode: box
+    icon: mdi:cash-multiple
+
+  mercy_coins:
+    name: "Mercy — Coin Balance"
+    min: 0
+    max: 9999
+    step: 1
+    mode: box
+    icon: mdi:cash-multiple
+
+  lois_coins:
+    name: "Lois — Coin Balance"
+    min: 0
+    max: 9999
+    step: 1
+    mode: box
+    icon: mdi:cash-multiple
+
+  # ── Screen time balance in minutes ────────────────────────────
+  titus_screen_time:
+    name: "Titus — Screen Time Balance (min)"
+    min: 0
+    max: 120
+    step: 1
+    mode: box
+    icon: mdi:television-play
+
+  mercy_screen_time:
+    name: "Mercy — Screen Time Balance (min)"
+    min: 0
+    max: 120
+    step: 1
+    mode: box
+    icon: mdi:television-play
+
+  lois_screen_time:
+    name: "Lois — Screen Time Balance (min)"
+    min: 0
+    max: 60
+    step: 1
+    mode: box
+    icon: mdi:television-play
+
+  # ── Daily screen time cap (minutes) ───────────────────────────
+  daily_screen_time_cap:
+    name: "Daily Screen Time Cap (min)"
+    min: 0
+    max: 120
+    step: 5
+    initial: 45
+    mode: slider
+    icon: mdi:timer-cog
+
+input_boolean:
+  # ── Duties complete per kid (set by webhook) ──────────────────
+  titus_duties_done:
+    name: "Titus — Duties Done Today"
+    icon: mdi:check-circle-outline
+
+  mercy_duties_done:
+    name: "Mercy — Duties Done Today"
+    icon: mdi:check-circle-outline
+
+  lois_duties_done:
+    name: "Lois — Duties Done Today"
+    icon: mdi:check-circle-outline
+
+  # ── Screen time active right now ──────────────────────────────
+  kids_screen_time_active:
+    name: "Kids Screen Time Active"
+    icon: mdi:television-play
+
+  # ── Sacred time block — overrides all screen time ─────────────
+  sacred_time_block:
+    name: "Sacred Time Block (dinner / devotions / Sunday)"
+    icon: mdi:book-cross
+
+input_text:
+  # ── Which kid is currently using screen time ──────────────────
+  screen_time_kid:
+    name: "Screen Time — Active Kid"
+    max: 20
+    icon: mdi:account-child

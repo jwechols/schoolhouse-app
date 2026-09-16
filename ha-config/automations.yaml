@@ -1,0 +1,277 @@
+# ══════════════════════════════════════════════════════════════════
+# Echols Learing Center — Home Assistant Automations
+#
+# SETUP:
+#   1. Add to configuration.yaml:  automation: !include automations.yaml
+#   2. Replace switch.kids_tv with your actual smart plug entity
+#   3. Replace notify.mobile_app_brianas_iphone with Briana's device
+#      (find it in Settings → Companion App → Notifications)
+#   4. Set HA_WEBHOOK_BASE_URL in Netlify env vars to your Nabu Casa URL
+# ══════════════════════════════════════════════════════════════════
+
+# ── 1. COINS EARNED ───────────────────────────────────────────────
+# Fires when a kid completes a round in the Learing Center
+- id: elc_coins_earned
+  alias: "ELC — Coins Earned"
+  trigger:
+    - platform: webhook
+      webhook_id: elc_coins_earned
+      allowed_methods: [POST]
+  action:
+    # Add coins to that kid's balance
+    - service: input_number.set_value
+      target:
+        entity_id: "input_number.{{ trigger.json.kidId }}_coins"
+      data:
+        value: >
+          {{ [0, (states('input_number.' + trigger.json.kidId + '_coins') | float(0)) + trigger.json.coins] | max }}
+    # Also convert to screen time minutes (10 coins = 1 min)
+    - service: input_number.set_value
+      target:
+        entity_id: "input_number.{{ trigger.json.kidId }}_screen_time"
+      data:
+        value: >
+          {{ [
+            0,
+            [
+              states('input_number.daily_screen_time_cap') | float(45),
+              (states('input_number.' + trigger.json.kidId + '_screen_time') | float(0))
+              + (trigger.json.coins / 10)
+            ] | min
+          ] | max | round(0) }}
+    # Notify Briana
+    - service: notify.mobile_app_brianas_iphone
+      data:
+        title: "🪙 {{ trigger.json.kidName }} earned coins!"
+        message: >
+          +{{ trigger.json.coins }} coins ({{ trigger.json.correct }}/{{ trigger.json.total }} — {{ trigger.json.pct }}%).
+          Balance: {{ (states('input_number.' + trigger.json.kidId + '_coins') | float(0)) | int }} coins,
+          {{ (states('input_number.' + trigger.json.kidId + '_screen_time') | float(0)) | int }} min screen time.
+
+# ── 2. DUTIES COMPLETE ────────────────────────────────────────────
+# Fires when a kid marks all duties done in the app
+- id: elc_duties_complete
+  alias: "ELC — Duties Complete"
+  trigger:
+    - platform: webhook
+      webhook_id: elc_duties_complete
+      allowed_methods: [POST]
+  action:
+    - service: input_boolean.turn_on
+      target:
+        entity_id: "input_boolean.{{ trigger.json.kidId }}_duties_done"
+    - service: notify.mobile_app_brianas_iphone
+      data:
+        title: "✅ {{ trigger.json.kidName }} finished duties!"
+        message: "All daily duties checked off. Ready to earn."
+
+# ── 3. SCREEN TIME REQUESTED ─────────────────────────────────────
+# Fires when a kid taps "Start Screen Time" in the app
+- id: elc_screentime_request
+  alias: "ELC — Screen Time Request"
+  trigger:
+    - platform: webhook
+      webhook_id: elc_screentime_request
+      allowed_methods: [POST]
+  condition:
+    # Not already running
+    - condition: state
+      entity_id: input_boolean.kids_screen_time_active
+      state: "off"
+    # Not a sacred block
+    - condition: state
+      entity_id: input_boolean.sacred_time_block
+      state: "off"
+    # Allowed time window: 4–7pm weekdays, 10am–7pm Saturday
+    - condition: template
+      value_template: >
+        {% set h = now().hour %}
+        {% set dow = now().weekday() %}
+        {% if dow < 5 %}
+          {{ h >= 16 and h < 19 }}
+        {% elif dow == 5 %}
+          {{ h >= 10 and h < 19 }}
+        {% else %}
+          false
+        {% endif %}
+    # Kid has duties done
+    - condition: template
+      value_template: >
+        {{ is_state('input_boolean.' + trigger.json.kidId + '_duties_done', 'on') }}
+    # Kid has screen time balance
+    - condition: template
+      value_template: >
+        {{ states('input_number.' + trigger.json.kidId + '_screen_time') | float(0) >= 1 }}
+  action:
+    # Mark screen time active + record which kid
+    - service: input_boolean.turn_on
+      target:
+        entity_id: input_boolean.kids_screen_time_active
+    - service: input_text.set_value
+      target:
+        entity_id: input_text.screen_time_kid
+      data:
+        value: "{{ trigger.json.kidId }}"
+    # Turn on the TV smart plug
+    - service: switch.turn_on
+      target:
+        entity_id: switch.kids_tv    # ← REPLACE with your plug entity
+    # Notify Briana
+    - service: notify.mobile_app_brianas_iphone
+      data:
+        title: "📺 {{ trigger.json.kidName }} started screen time"
+        message: "{{ trigger.json.minutes }} min. TV turned on automatically."
+    # Wait for the earned minutes
+    - delay:
+        minutes: "{{ trigger.json.minutes | int }}"
+    # Time's up — turn everything off
+    - service: switch.turn_off
+      target:
+        entity_id: switch.kids_tv
+    - service: input_boolean.turn_off
+      target:
+        entity_id: input_boolean.kids_screen_time_active
+    # Zero out that kid's screen time balance
+    - service: input_number.set_value
+      target:
+        entity_id: "input_number.{{ states('input_text.screen_time_kid') }}_screen_time"
+      data:
+        value: 0
+    # Final notification
+    - service: notify.mobile_app_brianas_iphone
+      data:
+        title: "⏰ Screen time ended"
+        message: "{{ trigger.json.kidName }}'s {{ trigger.json.minutes }} min are up. TV turned off."
+
+# ── 3b. SCREEN TIME BLOCKED ──────────────────────────────────────
+# Fires when request is rejected (wrong time / duties not done)
+- id: elc_screentime_blocked
+  alias: "ELC — Screen Time Blocked"
+  trigger:
+    - platform: webhook
+      webhook_id: elc_screentime_request
+      allowed_methods: [POST]
+  condition:
+    # Invert the allow conditions — only fires when blocked
+    - condition: or
+      conditions:
+        - condition: state
+          entity_id: input_boolean.kids_screen_time_active
+          state: "on"
+        - condition: state
+          entity_id: input_boolean.sacred_time_block
+          state: "on"
+        - condition: template
+          value_template: >
+            {% set h = now().hour %}
+            {% set dow = now().weekday() %}
+            {% if dow < 5 %}
+              {{ not (h >= 16 and h < 19) }}
+            {% elif dow == 5 %}
+              {{ not (h >= 10 and h < 19) }}
+            {% else %}
+              true
+            {% endif %}
+  action:
+    - service: notify.mobile_app_brianas_iphone
+      data:
+        title: "🚫 Screen time blocked"
+        message: >
+          {{ trigger.json.kidName }} tried to start screen time but it's not allowed right now.
+          {% if is_state('input_boolean.sacred_time_block', 'on') %}Sacred time is active.
+          {% elif is_state('input_boolean.kids_screen_time_active', 'on') %}Someone is already watching.
+          {% else %}Outside the allowed time window.{% endif %}
+
+# ── 4. PAYOUT ────────────────────────────────────────────────────
+# Fires when Briana taps "Pay Out" in the parent dashboard
+- id: elc_payout
+  alias: "ELC — Payout"
+  trigger:
+    - platform: webhook
+      webhook_id: elc_payout
+      allowed_methods: [POST]
+  action:
+    # Zero out coin balance
+    - service: input_number.set_value
+      target:
+        entity_id: "input_number.{{ trigger.json.kidId }}_coins"
+      data:
+        value: 0
+    - service: notify.mobile_app_brianas_iphone
+      data:
+        title: "💵 Payout recorded — {{ trigger.json.kidName }}"
+        message: >
+          {{ trigger.json.coins }} coins → ${{ trigger.json.dollars }}.
+          Transfer to Greenlight when convenient.
+
+# ── 5. DAILY RESET at midnight ───────────────────────────────────
+- id: elc_daily_reset
+  alias: "ELC — Daily Reset"
+  trigger:
+    - platform: time
+      at: "00:00:00"
+  action:
+    - service: input_boolean.turn_off
+      target:
+        entity_id:
+          - input_boolean.titus_duties_done
+          - input_boolean.mercy_duties_done
+          - input_boolean.lois_duties_done
+    - service: input_boolean.turn_off
+      target:
+        entity_id: input_boolean.kids_screen_time_active
+
+# ── 6. SUNDAY SACRED BLOCK (auto on/off) ─────────────────────────
+- id: elc_sunday_sacred_on
+  alias: "ELC — Sunday Sacred Block On"
+  trigger:
+    - platform: time
+      at: "00:01:00"
+  condition:
+    - condition: time
+      weekday: [sun]
+  action:
+    - service: input_boolean.turn_on
+      target:
+        entity_id: input_boolean.sacred_time_block
+
+- id: elc_sunday_sacred_off
+  alias: "ELC — Sunday Sacred Block Off (afternoon)"
+  trigger:
+    - platform: time
+      at: "14:00:00"
+  condition:
+    - condition: time
+      weekday: [sun]
+  action:
+    - service: input_boolean.turn_off
+      target:
+        entity_id: input_boolean.sacred_time_block
+
+# ── 7. DINNER BLOCK ──────────────────────────────────────────────
+- id: elc_dinner_block_on
+  alias: "ELC — Dinner Block On (6pm)"
+  trigger:
+    - platform: time
+      at: "18:00:00"
+  action:
+    - service: input_boolean.turn_on
+      target:
+        entity_id: input_boolean.sacred_time_block
+    # Kill any active screen time during dinner
+    - service: switch.turn_off
+      target:
+        entity_id: switch.kids_tv
+    - service: input_boolean.turn_off
+      target:
+        entity_id: input_boolean.kids_screen_time_active
+
+- id: elc_dinner_block_off
+  alias: "ELC — Dinner Block Off (7pm)"
+  trigger:
+    - platform: time
+      at: "19:00:00"
+  action:
+    - service: input_boolean.turn_off
+      target:
+        entity_id: input_boolean.sacred_time_block

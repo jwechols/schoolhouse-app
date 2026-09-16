@@ -1,0 +1,276 @@
+@import url("https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400;1,500;1,600&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap");
+@import "tailwindcss";
+
+/* ── League Gothic (local, sign, headings) ──────────────────────── */
+@font-face { font-family: "League Gothic"; src: url("/fonts/LeagueGothic-Regular.ttf") format("truetype"); font-weight: 100 900; font-display: swap; }
+
+/* ── Homeward design system fonts (Google Fonts) ─────────────────── */
+/* EB Garamond: display/reading · IBM Plex Sans: labels/UI · IBM Plex Mono: data */
+
+/* ══════════════════════════════════════════════════════════════════
+   SCHOOLHOUSE, Homeward family design system
+   ══════════════════════════════════════════════════════════════════ */
+
+/* ── Tailwind v4 color tokens ────────────────────────────────────── */
+@theme {
+  --color-parchment: #f4f1e9;
+  --color-navy:      #17203a;
+  --color-navy-dark: #0d1225;
+  --color-bone:      #ecdfc4;
+  --color-stone:     #6c7590;
+  --color-gold:      #b8862b;
+  --color-cream:     #fefbf1;
+  --color-paper:     #fefbf1;
+}
+
+:root {
+  /* ===== Echols Family Foundation (shared primitives) ===== */
+  --font-display: "EB Garamond", "Cormorant Garamond", Georgia, serif;
+  --font-ui:      "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-mono:    "IBM Plex Mono", ui-monospace, "SF Mono", monospace;
+  /* type scale */
+  --fs-display:46px; --lh-display:1.04; --fs-h1:36px; --lh-h1:1.08; --fs-h2:28px; --lh-h2:1.14;
+  --fs-h3:22px; --lh-h3:1.22; --fs-title:20px; --lh-title:1.25; --fs-body-lg:19px; --lh-body-lg:1.5;
+  --fs-body:16px; --lh-body:1.55; --fs-label:14px; --lh-label:1.35; --fs-meta:13px; --lh-meta:1.35;
+  --fs-micro:11px; --lh-micro:1.3; --fs-data:15px; --lh-data:1.4; --tracking-caps:0.10em; --tracking-tight:-0.01em;
+  /* spacing (4px grid) */
+  --sp-1:4px; --sp-2:8px; --sp-3:12px; --sp-4:16px; --sp-5:24px; --sp-6:32px; --sp-7:48px; --sp-8:64px; --sp-9:96px; --sp-10:128px;
+  /* radii */
+  --r-sm:8px; --r-md:12px; --r-lg:20px; --r-xl:28px; --r-2xl:36px; --r-full:999px;
+  /* tap targets */
+  --tap-kid:64px; --tap-parent:40px; --tap-min:44px;
+  /* elevation (warm, navy-tinted) */
+  --sh-sm:0 1px 2px rgba(23,32,58,.06),0 1px 1px rgba(23,32,58,.04);
+  --sh-md:0 2px 4px rgba(23,32,58,.05),0 6px 16px rgba(23,32,58,.08);
+  --sh-lg:0 4px 8px rgba(23,32,58,.06),0 16px 36px rgba(23,32,58,.12);
+  --sh-inset:inset 0 1px 2px rgba(23,32,58,.07);
+  /* motion */
+  --ease-standard:cubic-bezier(.4,0,.2,1); --ease-out:cubic-bezier(.22,.61,.36,1); --ease-soft:cubic-bezier(.34,1.16,.64,1);
+  --dur-fast:140ms; --dur:240ms; --dur-slow:360ms; --dur-celebrate:560ms;
+
+  /* ===== Semantic (light theme) ===== */
+  --paper:#fefbf1; --parchment:#f4f1e9; --bone:#ecdfc4; --bone-deep:#e2d4b4; --line:#e3d8bf; --line-strong:#d2c4a2;
+  --ink:#17203a; --ink-soft:#3d4767; --ink-muted:#6c7590; --ink-faint:#9aa1b4;
+  --green:#3f8a5b; --green-ink:#2c7047; --amber:#b9791c; --amber-ink:#935f13;
+  --sky:#3f6d93; --sky-ink:#2d597d; --clay:#bb4a3f; --clay-ink:#9a382f;
+  --surface:var(--paper); --surface-page:var(--parchment); --surface-sunken:var(--bone);
+  --border:var(--line); --border-strong:var(--line-strong);
+  --text:var(--ink); --text-soft:var(--ink-soft); --text-muted:var(--ink-muted); --text-faint:var(--ink-faint); --text-on-accent:#ffffff;
+  --success:var(--green); --success-ink:var(--green-ink); --notyet:var(--amber); --notyet-ink:var(--amber-ink);
+  --info:var(--sky); --info-ink:var(--sky-ink); --danger:var(--clay); --danger-ink:var(--clay-ink);
+  /* default (system/parent/shared) accent, calm ink-blue */
+  --accent:#33567d; --accent-ink:#294767; --accent-strong:#22405e; --accent-contrast:#ffffff;
+  --accent-tint:color-mix(in srgb, var(--accent) 13%, var(--surface));
+  --accent-soft:color-mix(in srgb, var(--accent) 22%, var(--surface));
+  --accent-line:color-mix(in srgb, var(--accent) 34%, var(--surface));
+  --accent-ring:color-mix(in srgb, var(--accent) 45%, transparent);
+  --focus:var(--accent);
+
+  /* ===== Legacy app var names → new tokens (so existing screens re-skin) ===== */
+  --bg:var(--surface-page); --card:var(--surface); --sunken:var(--surface-sunken);
+  --hair:var(--border); --muted:var(--text-muted);
+  --ink-2:var(--ink-soft); --ink-3:var(--ink-muted); --ink-4:var(--ink-faint);
+  --gold:#b8862b; --terracotta:var(--danger);
+  --tfe-cream:var(--surface-page); --tfe-bone:var(--surface-sunken);
+  --elc-cream-warm:var(--surface-page); --elc-cream:var(--surface-sunken);
+  --tfe-slate:var(--ink); --tfe-olive:var(--accent); --tfe-sage:var(--border-strong);
+  --elc-brown:var(--ink); --elc-brown-dark:var(--ink); --elc-green:var(--accent);
+
+  /* ===== Teacher Station status → semantic ===== */
+  --status-ready-text:var(--success-ink);  --status-ready-dot:var(--success);
+  --status-working-text:var(--accent-ink); --status-working-dot:var(--accent);
+  --status-help-text:var(--danger-ink);    --status-help-dot:var(--danger);
+  --status-done-text:var(--success-ink);   --status-done-dot:var(--success);
+
+  /* ===== Per-kid accent hexes (used directly in JS) ===== */
+  --kid-truma:#0babb9; --kid-truma-dark:#0a8f9b; --kid-truma-soft:#d7f2f4;
+  --kid-titus:#2563eb; --kid-titus-dark:#1d4fd0; --kid-titus-soft:#dbeafe;
+  --kid-mercy:#d4508a; --kid-mercy-dark:#b83b72; --kid-mercy-soft:#fce7f3;
+  --kid-lois:#c026d3;  --kid-lois-dark:#a41cb5;  --kid-lois-soft:#fae8ff;
+
+  /* ===== Typography (app-facing names) ===== */
+  --font-serif:var(--font-display); --font-sans:var(--font-ui); --font-body:var(--font-ui);
+  --font-sub:var(--font-ui); --font-scripture:var(--font-display);
+  --font-heading:"League Gothic", "Oswald", sans-serif; --font-sign:"Luckiest Guy", cursive;
+
+  --ease:cubic-bezier(.2,0,.2,1);
+}
+
+/* ===== Dark theme, a candle-lit schoolhouse at night ===== */
+[data-theme="dark"] {
+  --paper:#1d2537; --parchment:#141a29; --bone:#262f45; --bone-deep:#2f3a53; --line:#313b54; --line-strong:#414d6b;
+  --ink:#f2ecdc; --ink-soft:#cfd5e2; --ink-muted:#99a2b9; --ink-faint:#6d7691;
+  --green:#6cc08a; --green-ink:#8ed3a6; --amber:#e0a24a; --amber-ink:#ecbd76;
+  --sky:#7fb0d6; --sky-ink:#a3c8e4; --clay:#e08276; --clay-ink:#eda398;
+  --text-on-accent:#10151f;
+  --accent:#7fa8d0; --accent-ink:#a9c6e2; --accent-strong:#96b8d6;
+  --accent-tint:color-mix(in srgb, var(--accent) 20%, var(--surface));
+  --accent-soft:color-mix(in srgb, var(--accent) 30%, var(--surface));
+  --accent-line:color-mix(in srgb, var(--accent) 38%, var(--surface));
+}
+
+/* ===== Per-child accent themes (add .theme-<child> to a subtree) ===== */
+.theme-titus { --accent:#2563eb; --accent-ink:#1d4fd0; --accent-strong:#1b44b8; --accent-contrast:#fff; }
+.theme-mercy { --accent:#d4508a; --accent-ink:#b83b72; --accent-strong:#a23264; --accent-contrast:#fff; }
+.theme-lois  { --accent:#c026d3; --accent-ink:#a41cb5; --accent-strong:#8a1799; --accent-contrast:#fff; }
+.theme-truma { --accent:#0babb9; --accent-ink:#0a8f9b; --accent-strong:#087b86; --accent-contrast:#fff; }
+[data-theme="dark"] .theme-titus { --accent:#5b8cff; --accent-ink:#9db9ff; --accent-strong:#7aa2ff; --accent-contrast:#10151f; }
+[data-theme="dark"] .theme-mercy { --accent:#ec74a9; --accent-ink:#f4a3c6; --accent-strong:#f08bb8; --accent-contrast:#10151f; }
+[data-theme="dark"] .theme-lois  { --accent:#d75ce6; --accent-ink:#e79bf0; --accent-strong:#df7aeb; --accent-contrast:#10151f; }
+[data-theme="dark"] .theme-truma { --accent:#2fcdda; --accent-ink:#7de3ec; --accent-strong:#4fd6e1; --accent-contrast:#10151f; }
+
+/* ── Base styles ─────────────────────────────────────────────────── */
+body {
+  background-color: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3 { letter-spacing: -0.01em; }
+
+/* ── Utility classes ─────────────────────────────────────────────── */
+.bg-cream    { background-color: var(--bg); }
+
+/* ── Kid hub background gradients (warm Homeward bone palette) ───── */
+.bg-titus  { background: linear-gradient(180deg, #f4f1e9 0%, #dbeafe 55%, #f4f1e9 100%); }
+.bg-mercy  { background: linear-gradient(160deg, #f4f1e9 0%, #fce7f3 55%, #f4f1e9 100%); }
+.bg-lois   { background: linear-gradient(160deg, #f4f1e9 0%, #fae8ff 55%, #f4f1e9 100%); }
+.bg-truma  { background: linear-gradient(160deg, #f4f1e9 0%, #d7f2f4 55%, #f4f1e9 100%); }
+
+/* ── Teacher Station status dot pulse ───────────────────────────── */
+@keyframes pulseDot {
+  0%, 100% { box-shadow: 0 0 0 0 currentColor; opacity: 1; }
+  50%       { box-shadow: 0 0 7px 2px currentColor; opacity: .75; }
+}
+.dot-help    { animation: pulseDot 1.4s ease infinite; }
+.dot-working { animation: pulseDot 2.2s ease infinite; }
+
+/* ── Toast animation ─────────────────────────────────────────────── */
+@keyframes toastIn {
+  from { opacity: 0; transform: translate(-50%, 10px); }
+  to   { opacity: 1; transform: translate(-50%, 0); }
+}
+
+/* ── Shared animations ───────────────────────────────────────────── */
+@keyframes typingDot {
+  0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+  30%           { transform: translateY(-5px); opacity: 1; }
+}
+
+@keyframes pulseGlow {
+  0%, 100% { box-shadow: 0 0 0 0 currentColor; opacity: 1; }
+  50%       { box-shadow: 0 0 16px 4px currentColor; opacity: 0.9; }
+}
+
+@keyframes letterFall {
+  0%   { transform: translateY(-10px) scale(1.4); opacity: 1; }
+  60%  { opacity: 1; }
+  100% { transform: translateY(95vh) scale(0.8); opacity: 0; }
+}
+
+@keyframes slideIn {
+  from { transform: translateY(8px); opacity: 0; }
+  to   { transform: translateY(0);   opacity: 1; }
+}
+
+@keyframes bounceIn {
+  0%   { transform: scale(0.8); opacity: 0; }
+  60%  { transform: scale(1.05); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes pulse-timed-test {
+  0%, 100% { transform: scale(1);    box-shadow: 0 4px 20px rgba(220,38,38,0.4); }
+  50%       { transform: scale(1.02); box-shadow: 0 8px 32px rgba(220,38,38,0.7); }
+}
+
+@keyframes questCheck {
+  0%   { transform: scale(1); }
+  50%  { transform: scale(1.3); }
+  100% { transform: scale(1); }
+}
+
+/* Titus sound preference utility */
+@media (prefers-reduced-motion: reduce) {
+  * { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
+
+/* ── Fun celebration animations ─────────────────────────────────────── */
+@keyframes popIn {
+  0%   { transform: scale(0); opacity: 0; }
+  70%  { transform: scale(1.2); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes wiggle {
+  0%, 100% { transform: rotate(0deg); }
+  20%       { transform: rotate(-8deg); }
+  60%       { transform: rotate(8deg); }
+}
+
+@keyframes floatUp {
+  0%   { transform: translateY(0) scale(1); opacity: 1; }
+  100% { transform: translateY(-80px) scale(1.5); opacity: 0; }
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20%       { transform: translateX(-6px); }
+  40%       { transform: translateX(6px); }
+  60%       { transform: translateX(-4px); }
+  80%       { transform: translateX(4px); }
+}
+
+@keyframes starBurst {
+  0%   { transform: scale(0) rotate(0deg); opacity: 1; }
+  60%  { transform: scale(1.4) rotate(180deg); opacity: 1; }
+  100% { transform: scale(0) rotate(360deg); opacity: 0; }
+}
+
+@keyframes confettiFall {
+  0%   { transform: translateY(-20px) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+}
+
+@keyframes heartbeat {
+  0%, 100% { transform: scale(1); }
+  14%       { transform: scale(1.15); }
+  28%       { transform: scale(1); }
+  42%       { transform: scale(1.1); }
+  70%       { transform: scale(1); }
+}
+
+@keyframes rainbowPop {
+  0%   { filter: hue-rotate(0deg) brightness(1); }
+  50%  { filter: hue-rotate(180deg) brightness(1.3); }
+  100% { filter: hue-rotate(360deg) brightness(1); }
+}
+
+/* Button bounce on hover */
+.btn-bouncy {
+  transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.15s ease;
+}
+.btn-bouncy:hover {
+  transform: translateY(-2px) scale(1.03);
+}
+.btn-bouncy:active {
+  transform: translateY(1px) scale(0.97);
+}
+
+/* Correct answer glow */
+.correct-glow {
+  animation: correctPop 0.6s ease forwards;
+}
+@keyframes correctPop {
+  0%   { box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.8); }
+  50%  { box-shadow: 0 0 0 16px rgba(74, 222, 128, 0); transform: scale(1.02); }
+  100% { box-shadow: 0 0 0 0 rgba(74, 222, 128, 0); }
+}
+
+/* Wrong answer shake */
+.wrong-shake {
+  animation: shake 0.4s ease;
+}

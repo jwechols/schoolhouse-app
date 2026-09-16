@@ -1,0 +1,17 @@
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
+
+[build]
+  command = "npm run build"
+  publish = ".next"
+
+[build.environment]
+  NODE_VERSION = "20"
+
+# The version marker must never be cached — the app polls it to detect new
+# deploys and reload itself. If this were cached, the whole mechanism breaks.
+[[headers]]
+  for = "/version.json"
+  [headers.values]
+    Cache-Control = "no-store, max-age=0"
+    Netlify-CDN-Cache-Control = "no-store"
