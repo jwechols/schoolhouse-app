@@ -3,7 +3,7 @@
 export default function ParentDeskBar() {
   const links = [
     ["/parent", "Assign"],
-    ["/teacher", "Who is on"],
+    ["/teacher/room", "Who is on"],
     ["/parent/words", "Words"],
     ["/parent/curriculum", "Lessons"],
     ["/parent/reading", "Reading"],
