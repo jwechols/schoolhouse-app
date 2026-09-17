@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { KIDS, TRUMA_EARTHY, TRUMA_THEME } from "@/lib/kids";
 import { familyToday, type KidToday } from "@/lib/today-plan";
-import { warmTTS } from "@/lib/tts";
+import { unlockTTS } from "@/lib/tts";
 
 const META: Record<string, { name: string; emoji: string; color: string; colorDark: string }> = {
   truma: { name: "Truma", emoji: TRUMA_EARTHY.avatar, color: TRUMA_THEME.primary, colorDark: TRUMA_THEME.primaryDark },
@@ -45,7 +45,7 @@ function KidRow({ row }: { row: KidToday }) {
   const router = useRouter();
   const m = META[row.kidId] ?? META.titus;
   const go = (href: string) => {
-    warmTTS();
+    unlockTTS();
     router.push(href);
   };
 
@@ -104,7 +104,7 @@ export default function TodayBoard({ compact = false }: { compact?: boolean }) {
 
   useEffect(() => {
     setRows(familyToday());
-    warmTTS();
+    unlockTTS();
   }, []);
 
   if (!rows) {
