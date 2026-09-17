@@ -18,7 +18,7 @@ const META: Record<string, { name: string; grade: string; tutor: string; tutorEm
   titus: { name: "Titus", grade: "3rd Grade",   tutor: "Buck",            tutorEmoji: "🎣", school: "Brookside Academy" },
   mercy: { name: "Mercy", grade: "Kindergarten", tutor: "Princess Rose",  tutorEmoji: "🌹", school: "Midland Classical Academy" },
   lois:  { name: "Lois",  grade: "Pre-K",         tutor: "Princess Crystal", tutorEmoji: "❄️", school: "Home" },
-  truma: { name: "Truma", grade: "6th Grade",    tutor: "Lydia",          tutorEmoji: "🏻", school: "Midland Classical Academy" },
+  truma: { name: "Truma", grade: "6th Grade",    tutor: "Lydia",          tutorEmoji: "🪻", school: "Midland Classical Academy" },
 };
 
 interface Row {
@@ -114,7 +114,7 @@ export default function SchoolhouseHub({ kidId }: { kidId: string }) {
           </div>
         ) : today && (
           <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderTop: "4px solid var(--accent)", borderRadius: "var(--r-xl)", boxShadow: "var(--sh-md)", padding: 22, marginBottom: 20 }}>
-            <div style={{ ...eyebrow, color: "var(--accent-ink)", marginBottom: 8 }}>Today&apos;s lesson</div>
+            <div style={{ ...eyebrow, color: "var(--accent-ink)", marginBottom: 8 }}>Today's lesson</div>
             <div style={{ fontFamily: "var(--font-display)", fontSize: 26, fontWeight: 600, lineHeight: 1.12, marginBottom: 18 }}>{today.title}</div>
             <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
               <button onClick={() => goLesson(today.subject, today.id)} style={{ minHeight: 56, padding: "0 26px", fontSize: 18, fontWeight: 600, borderRadius: "var(--r-full)", background: "var(--accent)", color: "var(--accent-contrast)", border: "none", cursor: "pointer", boxShadow: "0 2px 0 var(--accent-strong), 0 4px 10px rgba(23,32,58,.14)" }}>
@@ -134,7 +134,7 @@ export default function SchoolhouseHub({ kidId }: { kidId: string }) {
           <span style={{ fontSize: 24, width: 44, height: 44, display: "grid", placeItems: "center", background: "var(--accent-tint)", border: "1px solid var(--accent-line)", borderRadius: "var(--r-md)", flexShrink: 0 }}>🕊️</span>
           <span style={{ flex: 1, minWidth: 0 }}>
             <span style={{ display: "block", fontFamily: "var(--font-display)", fontSize: 19, fontWeight: 600, color: "var(--text)" }}>Catechism for Boys and Girls</span>
-            <span style={{ display: "block", fontSize: 13, color: "var(--text-muted)" }}>Five questions. Truth &amp; Grace Book 1.</span>
+            <span style={{ display: "block", fontSize: 13, color: "var(--text-muted)" }}>Five questions. Truth & Grace Book 1.</span>
           </span>
           <span style={{ fontSize: 20, color: "var(--accent-ink)", flexShrink: 0 }}>→</span>
         </button>
@@ -143,7 +143,7 @@ export default function SchoolhouseHub({ kidId }: { kidId: string }) {
           <span style={{ fontSize: 24, width: 44, height: 44, display: "grid", placeItems: "center", background: "var(--accent-tint)", border: "1px solid var(--accent-line)", borderRadius: "var(--r-md)", flexShrink: 0 }}>🪙</span>
           <span style={{ flex: 1, minWidth: 0 }}>
             <span style={{ display: "block", fontFamily: "var(--font-display)", fontSize: 19, fontWeight: 600, color: "var(--text)" }}>My Stewardship</span>
-            <span style={{ display: "block", fontSize: 13, color: "var(--text-muted)" }}>Coins, giving, saving &amp; your goals</span>
+            <span style={{ display: "block", fontSize: 13, color: "var(--text-muted)" }}>Coins, giving, saving & your goals</span>
           </span>
           <span style={{ fontSize: 20, color: "var(--accent-ink)", flexShrink: 0 }}>→</span>
         </button>
@@ -152,7 +152,7 @@ export default function SchoolhouseHub({ kidId }: { kidId: string }) {
           <button onClick={() => go(kidId === "truma" ? "/kids/truma/words" : `/kids/${kidId}/words`)} style={stationBtn}>
             <span style={{ fontSize: 24, width: 44, height: 44, display: "grid", placeItems: "center", background: "var(--accent-tint)", border: "1px solid var(--accent-line)", borderRadius: "var(--r-md)", flexShrink: 0 }}>📖</span>
             <span style={{ flex: 1, minWidth: 0 }}>
-              <span style={{ display: "block", fontFamily: "var(--font-display)", fontSize: 19, fontWeight: 600, color: "var(--text)" }}>This Week&apos;s Words</span>
+              <span style={{ display: "block", fontFamily: "var(--font-display)", fontSize: 19, fontWeight: 600, color: "var(--text)" }}>This Week's Words</span>
               <span style={{ display: "block", fontSize: 13, color: "var(--text-muted)" }}>{wordListCount} list{wordListCount === 1 ? "" : "s"} from Mom</span>
             </span>
             <span style={{ fontSize: 20, color: "var(--accent-ink)", flexShrink: 0 }}>→</span>
