@@ -12,6 +12,8 @@ export const OPENAI_VOICE: Record<string, string> = {
 };
 
 // Voice delivery style, steered per tutor (gpt-4o-mini-tts `instructions`).
+// KEEP IN SYNC with app/api/tts/route.ts — GET synthesis looks up by voice
+// server-side so the URL stays short and CDN-cacheable.
 export const VOICE_INSTRUCTIONS: Record<string, string> = {
   ash: "Warm, friendly older outdoorsman, like a favorite hunting-and-fishing uncle. Easygoing, upbeat, a little playful and folksy to keep an 8-year-old boy engaged. Encouraging, never rushed or stern.",
   coral: "Gentle, joyful kindergarten teacher who loves flowers. Warm and bright with a light sing-song lilt. Slow and clear for a 5-year-old, full of delight and encouragement.",
@@ -19,7 +21,7 @@ export const VOICE_INSTRUCTIONS: Record<string, string> = {
   nova: "Warm, intelligent woman mentor. Calm, thoughtful, and encouraging. Speak to a bright 11-year-old as a capable young scholar, never talk down to her. Unhurried and clear, with a gentle smile in the voice. Pronounce the name 'Truma' as 'TROO-mah' (rhymes with Puma), never 'Truh-ma'.",
 };
 
-// ── Pre-baked audio ───────────────────────────────────────────────────────────
+// ── Pre-baked audio ───────────────────────────────────────────
 // Authored lesson lines are synthesized ONCE to static files at
 // public/lesson-audio/<key>.mp3 by scripts/prebake-audio.mjs. When a line has a
 // baked file, useTTS plays it instantly with zero OpenAI round-trip and zero
@@ -44,7 +46,8 @@ export function audioKey(voice: string, text: string): string {
   return `${voice}-${(h >>> 0).toString(16).padStart(8, "0")}-${s.length}`;
 }
 
-// Manifest of baked keys, fetched once per page load.
+// Manifest of baked keys, fetched once per page load. NEVER block first play
+// on this — catechism and unbaked lines must start the GET immediately.
 let bakedManifest: Set<string> | null = null;
 let manifestPromise: Promise<Set<string>> | null = null;
 function loadBakedManifest(): Promise<Set<string>> {
@@ -59,8 +62,21 @@ function loadBakedManifest(): Promise<Set<string>> {
 }
 
 const TTS_CACHE_NAME = "schoolhouse-tts-v2";
+const GET_MAX = 700; // raw chars; catechism + first sentences fit. Longer → POST.
 const memCache = new Map<string, ArrayBuffer>();
 const inflight = new Map<string, Promise<ArrayBuffer | null>>();
+
+/** CDN-cacheable GET URL. Same voice+text always hits the same URL. */
+export function ttsGetUrl(voice: string, text: string): string {
+  const qs = new URLSearchParams();
+  qs.set("v", voice);
+  qs.set("t", spokenForm(text));
+  return `/api/tts?${qs.toString()}`;
+}
+
+function memGet(key: string): ArrayBuffer | undefined {
+  return memCache.get(key);
+}
 
 async function cacheGet(key: string): Promise<ArrayBuffer | null> {
   const hit = memCache.get(key);
@@ -92,17 +108,35 @@ async function cachePut(key: string, ab: ArrayBuffer): Promise<void> {
   }
 }
 
-async function fetchLive(voice: string, text: string): Promise<ArrayBuffer | null> {
+/** Fill memory + Cache API from a URL without blocking playback. */
+function hydrateFromUrl(key: string, url: string): void {
+  if (memCache.has(key)) return;
+  const existing = inflight.get(key);
+  if (existing) return;
+  const work = (async () => {
+    const disk = await cacheGet(key);
+    if (disk) return disk;
+    const r = await fetch(url);
+    if (!r.ok) return null;
+    const ab = await r.arrayBuffer();
+    await cachePut(key, ab);
+    return ab;
+  })();
+  inflight.set(key, work);
+  void work.finally(() => inflight.delete(key));
+}
+
+async function fetchLivePost(voice: string, text: string): Promise<ArrayBuffer | null> {
   const spoken = spokenForm(text);
   const res = await fetch("/api/tts", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ text: spoken, voice, instructions: VOICE_INSTRUCTIONS[voice] }),
+    body: JSON.stringify({ text: spoken, voice }),
   });
   return res.ok ? res.arrayBuffer() : null;
 }
 
-/** Resolve audio for a (voice, line): memory → Cache API → baked file → live TTS. */
+/** Resolve audio for prefetch / long POST fallback. Does not block speak(). */
 async function resolveAudio(voice: string, text: string): Promise<ArrayBuffer | null> {
   const key = audioKey(voice, text);
   const cached = await cacheGet(key);
@@ -112,8 +146,7 @@ async function resolveAudio(voice: string, text: string): Promise<ArrayBuffer | 
   if (existing) return existing;
 
   const work = (async () => {
-    const manifest = bakedManifest ?? (await loadBakedManifest());
-    if (manifest.has(key)) {
+    if (bakedManifest?.has(key)) {
       try {
         const r = await fetch(`/lesson-audio/${key}.mp3`);
         if (r.ok) {
@@ -122,10 +155,18 @@ async function resolveAudio(voice: string, text: string): Promise<ArrayBuffer | 
           return ab;
         }
       } catch {
-        /* fall through to live */
+        /* fall through */
       }
     }
-    const live = await fetchLive(voice, text);
+    if (text.length <= GET_MAX) {
+      const r = await fetch(ttsGetUrl(voice, text));
+      if (r.ok) {
+        const ab = await r.arrayBuffer();
+        await cachePut(key, ab);
+        return ab;
+      }
+    }
+    const live = await fetchLivePost(voice, text);
     if (live) await cachePut(key, live);
     return live;
   })();
@@ -141,8 +182,22 @@ async function resolveAudio(voice: string, text: string): Promise<ArrayBuffer | 
 /** Fire-and-forget: bake the next line into cache while the current one plays. */
 export function prefetchTTS(voice: string, text: string): void {
   if (!text?.trim()) return;
-  void resolveAudio(voice, text);
+  for (const chunk of chunkText(text)) {
+    const key = audioKey(voice, chunk);
+    if (memCache.has(key)) continue;
+    if (bakedManifest?.has(key)) {
+      hydrateFromUrl(key, `/lesson-audio/${key}.mp3`);
+    } else if (chunk.length <= GET_MAX) {
+      hydrateFromUrl(key, ttsGetUrl(voice, chunk));
+    } else {
+      void resolveAudio(voice, chunk);
+    }
+  }
 }
+
+/** Tiny WAV so iOS will unlock HTMLAudio inside the tap that navigates. */
+const SILENT_WAV =
+  "data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA";
 
 /** Wake the Netlify TTS function + load the baked-audio manifest on first tap. */
 export function warmTTS(): void {
@@ -151,9 +206,44 @@ export function warmTTS(): void {
   void fetch("/api/tts", { method: "GET", cache: "no-store" }).catch(() => {});
 }
 
-// Break text into chunks so the FIRST chunk (one sentence) can synthesize and
-// start playing fast, while the rest is fetched in parallel. Short lines
-// (catechism, buttons) stay one piece so the cache hits next time.
+/**
+ * Call from a tap (Today board, hub, 🔊) BEFORE navigating or speaking.
+ * Unlocks iOS audio, resumes AudioContext, and wakes the TTS function so the
+ * next speak() is not a cold start + blocked autoplay.
+ */
+export function unlockTTS(): void {
+  if (typeof window === "undefined") return;
+  warmTTS();
+  try {
+    const AC =
+      (window as unknown as { AudioContext?: typeof AudioContext; webkitAudioContext?: typeof AudioContext }).AudioContext
+      || (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+    if (AC) {
+      const ctx = new AC();
+      void ctx.resume();
+      const buf = ctx.createBuffer(1, 1, 22050);
+      const src = ctx.createBufferSource();
+      src.buffer = buf;
+      src.connect(ctx.destination);
+      src.start(0);
+    }
+  } catch {
+    /* ignore */
+  }
+  try {
+    const a = new Audio();
+    a.setAttribute("playsinline", "true");
+    (a as HTMLAudioElement & { playsInline?: boolean }).playsInline = true;
+    a.src = SILENT_WAV;
+    void a.play().then(() => { a.pause(); a.removeAttribute("src"); }).catch(() => {});
+  } catch {
+    /* ignore */
+  }
+}
+
+// Break text into chunks so the FIRST chunk (one sentence) can start a GET
+// immediately. Short lines (catechism, buttons) stay one piece so the CDN
+// cache hits next time.
 function chunkText(text: string): string[] {
   if (text.length <= 180) return [text];
   const sentences = (text.match(/[^.!?]+[.!?]+|\S[^.!?]*$/g) ?? [text])
@@ -165,6 +255,27 @@ function chunkText(text: string): string[] {
     chunks.push(sentences.slice(i, i + 2).join(" "));
   }
   return chunks;
+}
+
+function srcForChunk(voice: string, chunk: string): { src: string; key: string; blobUrl: boolean } {
+  const key = audioKey(voice, chunk);
+  const mem = memGet(key);
+  if (mem) {
+    return { src: URL.createObjectURL(new Blob([mem], { type: "audio/mpeg" })), key, blobUrl: true };
+  }
+  if (bakedManifest?.has(key)) {
+    return { src: `/lesson-audio/${key}.mp3`, key, blobUrl: false };
+  }
+  if (chunk.length <= GET_MAX) {
+    return { src: ttsGetUrl(voice, chunk), key, blobUrl: false };
+  }
+  return { src: "", key, blobUrl: false };
+}
+
+function primeAudioEl(audio: HTMLAudioElement): void {
+  audio.preload = "auto";
+  audio.setAttribute("playsinline", "true");
+  (audio as HTMLAudioElement & { playsInline?: boolean }).playsInline = true;
 }
 
 // App-wide single-voice gate. Any new speak() claims the gate: it stops
@@ -180,25 +291,8 @@ export function useTTS(voice = "nova") {
   const [paused, setPaused] = useState(false);
 
   const unlockAudio = useCallback(() => {
-    if (typeof window === "undefined") return;
     audioUnlocked.current = true;
-    // iOS: resume a silent AudioContext inside the user gesture so later HTMLAudio plays.
-    try {
-      const AC = (window as unknown as { AudioContext?: typeof AudioContext; webkitAudioContext?: typeof AudioContext }).AudioContext
-        || (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-      if (AC) {
-        const ctx = new AC();
-        void ctx.resume();
-        const buf = ctx.createBuffer(1, 1, 22050);
-        const src = ctx.createBufferSource();
-        src.buffer = buf;
-        src.connect(ctx.destination);
-        src.start(0);
-      }
-    } catch {
-      /* ignore */
-    }
-    warmTTS();
+    unlockTTS();
   }, []);
 
   const stopAll = () => {
@@ -208,26 +302,7 @@ export function useTTS(voice = "nova") {
     audiosRef.current = [];
   };
 
-  const playBuffer = (ab: ArrayBuffer, live: () => boolean): Promise<void> => {
-    return new Promise((resolve) => {
-      if (!live()) { resolve(); return; }
-      const url = URL.createObjectURL(new Blob([ab], { type: "audio/mpeg" }));
-      const audio = new Audio();
-      audio.preload = "auto";
-      audio.src = url;
-      audiosRef.current.push(audio);
-      const done = () => {
-        URL.revokeObjectURL(url);
-        audiosRef.current = audiosRef.current.filter((el) => el !== audio);
-        resolve();
-      };
-      audio.onended = done;
-      audio.onerror = done;
-      audio.play().catch(done);
-    });
-  };
-
-  const speak = useCallback(async (text: string, onEnd?: () => void) => {
+  const speak = useCallback((text: string, onEnd?: () => void) => {
     if (typeof window === "undefined" || !text.trim()) return;
     const myId = ++reqIdRef.current;
     stopAll();
@@ -236,30 +311,88 @@ export function useTTS(voice = "nova") {
     const turn = ++globalAudioTurn;
     const live = () => myId === reqIdRef.current && turn === globalAudioTurn;
     setPaused(false);
+    setSpeaking(true);
+    void loadBakedManifest();
 
     const finish = () => {
       if (live()) { setSpeaking(false); setPaused(false); onEnd?.(); }
     };
 
-    try {
-      void loadBakedManifest();
-      const chunks = chunkText(text);
-      // Kick every chunk immediately so #2 is in cache before #1 finishes.
-      const pending = chunks.map((c) => resolveAudio(voice, c));
-      setSpeaking(true);
+    const chunks = chunkText(text);
+    // Kick remaining chunks into cache while #1 plays.
+    for (let i = 1; i < chunks.length; i++) prefetchTTS(voice, chunks[i]);
 
-      for (let i = 0; i < pending.length; i++) {
-        let buf: ArrayBuffer | null = null;
-        try { buf = await pending[i]; } catch { buf = null; }
-        if (!live()) return;
-        if (!buf) continue;
-        await playBuffer(buf, live);
-        if (!live()) return;
+    const playChunk = (i: number) => {
+      if (!live()) return;
+      if (i >= chunks.length) { finish(); return; }
+      const chunk = chunks[i];
+      const { src, key, blobUrl } = srcForChunk(voice, chunk);
+
+      const goNext = () => {
+        if (blobUrl) try { URL.revokeObjectURL(src); } catch { /* */ }
+        playChunk(i + 1);
+      };
+
+      // Rare long chunk: POST, then play the buffer. First sentences never hit this.
+      if (!src) {
+        void resolveAudio(voice, chunk).then((buf) => {
+          if (!live()) return;
+          if (!buf) { playChunk(i + 1); return; }
+          const url = URL.createObjectURL(new Blob([buf], { type: "audio/mpeg" }));
+          const audio = new Audio();
+          primeAudioEl(audio);
+          audio.src = url;
+          audiosRef.current.push(audio);
+          const done = () => {
+            URL.revokeObjectURL(url);
+            audiosRef.current = audiosRef.current.filter((el) => el !== audio);
+            playChunk(i + 1);
+          };
+          audio.onended = done;
+          audio.onerror = done;
+          void audio.play().catch(done);
+        });
+        return;
       }
-      finish();
-    } catch {
-      finish();
-    }
+
+      // Progressive play: set src and play() in this turn so iOS keeps the
+      // user-gesture and HTMLAudio can start as the first MP3 frames arrive
+      // (GET is CDN-cached after the first family play of that line).
+      const audio = new Audio();
+      primeAudioEl(audio);
+      audio.src = src;
+      audiosRef.current.push(audio);
+      if (!blobUrl) hydrateFromUrl(key, src);
+      const done = () => {
+        audiosRef.current = audiosRef.current.filter((el) => el !== audio);
+        goNext();
+      };
+      audio.onended = done;
+      audio.onerror = () => {
+        // GET failed (cold error / 500). One POST fallback, then move on.
+        void fetchLivePost(voice, chunk).then((buf) => {
+          if (!live()) return;
+          if (!buf) { goNext(); return; }
+          void cachePut(key, buf);
+          const url = URL.createObjectURL(new Blob([buf], { type: "audio/mpeg" }));
+          const fallback = new Audio();
+          primeAudioEl(fallback);
+          fallback.src = url;
+          audiosRef.current.push(fallback);
+          const fbDone = () => {
+            URL.revokeObjectURL(url);
+            audiosRef.current = audiosRef.current.filter((el) => el !== fallback);
+            goNext();
+          };
+          fallback.onended = fbDone;
+          fallback.onerror = fbDone;
+          void fallback.play().catch(fbDone);
+        });
+      };
+      void audio.play().catch(done);
+    };
+
+    playChunk(0);
   }, [voice]);
 
   const prefetch = useCallback((text: string) => {
