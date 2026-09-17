@@ -5,8 +5,8 @@ import { useRouter } from "next/navigation";
 import { CATECHISM, KID_CATECHISM_RANGES, type CatechismQuestion } from "@/lib/catechism-boys-girls";
 import type { KidProfile } from "@/lib/kids";
 import { useTTS, OPENAI_VOICE } from "@/lib/tts";
+import { hubHref } from "@/lib/today-plan";
 
-// ── Mastery storage ───────────────────────────────────────────────────────────
 interface QuestionRecord { mastered: boolean; attempts: number; lastSeen: string }
 type MasteryMap = Record<string, QuestionRecord>;
 
@@ -30,14 +30,12 @@ function addXp(kidId: string, amount: number) {
   } catch { /* */ }
 }
 
-// ── Session builder ───────────────────────────────────────────────────────────
 const SESSION_SIZE = 5;
 function buildSession(kidId: string, mastery: MasteryMap): CatechismQuestion[] {
   const maxN = KID_CATECHISM_RANGES[kidId]?.to ?? 33;
   const pool = CATECHISM.filter(q => q.number <= maxN);
   const fresh = pool.filter(q => !mastery[q.number]?.mastered);
   const known = pool.filter(q => mastery[q.number]?.mastered);
-  // Prioritize unmastered; fill remainder with review
   const pick = [...fresh.slice(0, SESSION_SIZE)];
   if (pick.length < SESSION_SIZE) {
     const review = known.sort(() => Math.random() - 0.5);
@@ -46,7 +44,6 @@ function buildSession(kidId: string, mastery: MasteryMap): CatechismQuestion[] {
   return pick.slice(0, SESSION_SIZE).sort(() => Math.random() - 0.5);
 }
 
-// ── Progress ring ─────────────────────────────────────────────────────────────
 function Ring({ pct, color, size = 56 }: { pct: number; color: string; size?: number }) {
   const r = (size - 8) / 2;
   const circ = 2 * Math.PI * r;
@@ -65,21 +62,19 @@ function Ring({ pct, color, size = 56 }: { pct: number; color: string; size?: nu
   );
 }
 
-// ── Main component ────────────────────────────────────────────────────────────
 export default function CatechismDrill({ profile }: { profile: KidProfile }) {
   const router = useRouter();
   const { id: kidId, color, colorDark, soft, uiSize, name } = profile;
-  const { speak } = useTTS(OPENAI_VOICE[kidId] ?? "nova");
+  const { speak, prefetch, unlockAudio } = useTTS(OPENAI_VOICE[kidId] ?? "nova");
+  const home = hubHref(kidId);
 
   const [mastery, setMastery]       = useState<MasteryMap>({});
   const [session, setSession]       = useState<CatechismQuestion[]>([]);
   const [idx, setIdx]               = useState(0);
   const [phase, setPhase]           = useState<"q" | "a" | "done">("q");
   const [sessionGot, setSessionGot] = useState(0);
-  const [revealed, setRevealed]     = useState(false);
   const [ready, setReady]           = useState(false);
 
-  // Load from localStorage on mount
   useEffect(() => {
     const m = loadMastery(kidId);
     setMastery(m);
@@ -93,19 +88,41 @@ export default function CatechismDrill({ profile }: { profile: KidProfile }) {
   const pct = pool.length > 0 ? masteredCount / pool.length : 0;
 
   const current = session[idx];
+  const autoSpeak = uiSize === "xlarge" || uiSize === "large";
+
+  // Prefetch the whole round on load so the speaker / Show Answer is a cache hit.
+  useEffect(() => {
+    if (!ready || session.length === 0) return;
+    session.forEach((q, i) => {
+      if (i === 0 && autoSpeak) {
+        prefetch(q.answer);
+      } else {
+        prefetch(q.question);
+        prefetch(q.answer);
+      }
+    });
+  }, [ready, session]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    if (uiSize === "xlarge" && ready && current && phase === "q") {
-      speak(current.question);
+    if (!ready || !current) return;
+    if (phase === "q") {
+      prefetch(current.answer);
+      if (autoSpeak) speak(current.question);
+    } else if (phase === "a") {
+      const next = session[idx + 1];
+      if (next) prefetch(next.question);
+      if (autoSpeak) speak(current.answer);
     }
-  }, [idx, phase, ready, current, uiSize, speak]);
+  }, [idx, phase, ready]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  function say(text: string) {
+    unlockAudio();
+    speak(text);
+  }
 
   function revealAnswer() {
-    setRevealed(true);
+    unlockAudio();
     setPhase("a");
-    if (uiSize === "xlarge" && current) {
-      setTimeout(() => speak(current.answer), 300);
-    }
   }
 
   function grade(gotIt: boolean) {
@@ -131,7 +148,6 @@ export default function CatechismDrill({ profile }: { profile: KidProfile }) {
     } else {
       setIdx(i => i + 1);
       setPhase("q");
-      setRevealed(false);
     }
   }
 
@@ -141,11 +157,9 @@ export default function CatechismDrill({ profile }: { profile: KidProfile }) {
     setSession(buildSession(kidId, m));
     setIdx(0);
     setPhase("q");
-    setRevealed(false);
     setSessionGot(0);
   }
 
-  // ── Font sizes per uiSize ────────────────────────────────────────────────
   const qSize  = uiSize === "xlarge" ? 34 : uiSize === "large" ? 26 : 22;
   const aSize  = uiSize === "xlarge" ? 30 : uiSize === "large" ? 24 : 20;
   const refSz  = uiSize === "xlarge" ? 14 : 13;
@@ -161,7 +175,6 @@ export default function CatechismDrill({ profile }: { profile: KidProfile }) {
     );
   }
 
-  // ── Complete screen ──────────────────────────────────────────────────────
   if (phase === "done") {
     const allDone = masteredCount >= pool.length;
     return (
@@ -188,7 +201,6 @@ export default function CatechismDrill({ profile }: { profile: KidProfile }) {
           </div>
         </div>
 
-        {/* Overall progress */}
         <div style={{ display: "flex", alignItems: "center", gap: 16, padding: "20px 28px",
           background: soft, borderRadius: 20, border: `1px solid ${color}33` }}>
           <Ring pct={pct} color={color} size={64} />
@@ -209,7 +221,6 @@ export default function CatechismDrill({ profile }: { profile: KidProfile }) {
           </div>
         </div>
 
-        {/* Action buttons */}
         <div style={{ display: "flex", gap: 12, flexWrap: "wrap", justifyContent: "center" }}>
           <button onClick={startNew} className="btn-bouncy"
             style={{ padding: "16px 28px", borderRadius: 16, border: "none",
@@ -218,7 +229,7 @@ export default function CatechismDrill({ profile }: { profile: KidProfile }) {
               color: "#fff", cursor: "pointer", boxShadow: `0 6px 20px ${color}44` }}>
             Another round
           </button>
-          <button onClick={() => router.push(`/kids/${kidId}/hub`)} className="btn-bouncy"
+          <button onClick={() => router.push(home)} className="btn-bouncy"
             style={{ padding: "16px 28px", borderRadius: 16,
               border: `1.5px solid ${color}44`, background: "var(--bg)",
               fontFamily: "var(--font-body)", fontWeight: 600, fontSize: 17,
@@ -230,17 +241,15 @@ export default function CatechismDrill({ profile }: { profile: KidProfile }) {
     );
   }
 
-  // ── Drill screen ─────────────────────────────────────────────────────────
   const prevMastered = mastery[current.number]?.mastered;
 
   return (
     <div style={{ minHeight: "100vh", background: "var(--bg)", display: "flex",
       flexDirection: "column", padding: "0 0 40px" }}>
 
-      {/* ── Top bar ─────────────────────────────────────────────────────── */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between",
         padding: "16px 20px", borderBottom: "1px solid rgba(0,0,0,0.06)" }}>
-        <button onClick={() => router.push(`/kids/${kidId}/hub`)}
+        <button onClick={() => router.push(home)}
           style={{ background: "none", border: "none", cursor: "pointer",
             fontFamily: "var(--font-body)", fontSize: 15, color: "var(--muted)",
             padding: "6px 10px", borderRadius: 10,
@@ -248,7 +257,6 @@ export default function CatechismDrill({ profile }: { profile: KidProfile }) {
           ← hub
         </button>
 
-        {/* Progress pill */}
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           {session.map((_, i) => (
             <div key={i} style={{
@@ -273,12 +281,10 @@ export default function CatechismDrill({ profile }: { profile: KidProfile }) {
         </div>
       </div>
 
-      {/* ── Question card ────────────────────────────────────────────────── */}
       <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center",
         justifyContent: "center", padding: "32px 24px", gap: 28, maxWidth: 700, margin: "0 auto",
         width: "100%" }}>
 
-        {/* Eyebrow */}
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <span style={{ fontFamily: "var(--font-body)", fontWeight: 700, fontSize: 12,
             letterSpacing: "0.16em", textTransform: "uppercase", color }}>
@@ -293,15 +299,13 @@ export default function CatechismDrill({ profile }: { profile: KidProfile }) {
           )}
         </div>
 
-        {/* Question */}
         <div style={{ textAlign: "center", maxWidth: 560 }}>
-          {uiSize === "xlarge" && (
-            <button onClick={() => speak(current.question)}
-              style={{ background: "none", border: "none", cursor: "pointer",
-                fontSize: 28, marginBottom: 8, display: "block", margin: "0 auto 8px" }}>
-              🔊
-            </button>
-          )}
+          <button onClick={() => say(current.question)}
+            aria-label="Hear the question"
+            style={{ background: "none", border: "none", cursor: "pointer",
+              fontSize: 28, marginBottom: 8, display: "block", margin: "0 auto 8px" }}>
+            🔊
+          </button>
           <p style={{ fontFamily: "var(--font-scripture)", fontStyle: "italic",
             fontSize: qSize, color: "var(--ink)", lineHeight: 1.5, margin: 0,
             textAlign: "center" }}>
@@ -309,19 +313,17 @@ export default function CatechismDrill({ profile }: { profile: KidProfile }) {
           </p>
         </div>
 
-        {/* Answer reveal */}
         {phase === "a" ? (
           <div style={{ width: "100%", maxWidth: 560, borderRadius: 20,
             background: soft, border: `1.5px solid ${color}33`,
             padding: "24px 28px",
             animation: "popIn .25s var(--ease)" }}>
-            {uiSize === "xlarge" && (
-              <button onClick={() => speak(current.answer)}
-                style={{ background: "none", border: "none", cursor: "pointer",
-                  fontSize: 24, display: "block", marginBottom: 8 }}>
-                🔊
-              </button>
-            )}
+            <button onClick={() => say(current.answer)}
+              aria-label="Hear the answer"
+              style={{ background: "none", border: "none", cursor: "pointer",
+                fontSize: 24, display: "block", marginBottom: 8 }}>
+              🔊
+            </button>
             <p style={{ fontFamily: "var(--font-scripture)",
               fontSize: aSize, color: colorDark, lineHeight: 1.55, margin: "0 0 12px",
               textAlign: "center" }}>
@@ -345,7 +347,6 @@ export default function CatechismDrill({ profile }: { profile: KidProfile }) {
           </button>
         )}
 
-        {/* Grade buttons */}
         {phase === "a" && (
           <div style={{ display: "flex", gap: 14, flexWrap: "wrap", justifyContent: "center",
             animation: "floatUp .3s var(--ease)" }}>
