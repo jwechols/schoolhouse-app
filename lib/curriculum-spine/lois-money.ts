@@ -1,15 +1,5 @@
 import type { Course } from "./types";
 
-// Lois, Intro to Money (grammar stage, Pre-K age 3). The tiniest, gentlest start before
-// she begins earning. Kept to Princess Crystal's 2-sentence voice: money comes from
-// helping, we give-save-spend, saving lets us get something special later, and it is all
-// God's gift. Confessional framing at a toddler's level (James 1:17, every good gift is
-// from God).
-//
-// Skill scaffolding adapted from the Marble open skill taxonomy, Life Skills domain, 
-// used as a coverage map only; content authored fresh in the family's idiom.
-// Source: github.com/withmarbleapp/os-taxonomy (ODbL 1.0 / CC BY-SA 4.0).
-
 export const LOIS_MONEY: Course = {
   kidId: "lois",
   subject: "money",
@@ -29,6 +19,16 @@ export const LOIS_MONEY: Course = {
         { id: "lois-money-u1-l2", title: "Give, Save, Spend", objective: "Know we give some, save some, spend some.", teach: "We give some pennies, save some, and spend some. Three little jars!", memoryWork: "Give some, save some, spend some." },
         { id: "lois-money-u1-l3", title: "Save for Something Special", objective: "Know saving lets us get something special later.", teach: "If we save our pennies and wait, we can get something special. Waiting is worth it!", memoryWork: "Save and wait, and get something special." },
         { id: "lois-money-u1-l4", title: "Every Gift Is from God", objective: "Know everything good comes from God.", teach: "Every good thing comes from God. We say thank you, God!", memoryWork: "Every good gift comes from God. Thank you, God!" },
+      ],
+    },
+    {
+      id: "lois-money-u2",
+      title: "Unit 2 · Give First",
+      summary: "The give jar is for church, waiting is good, we do not grab, we say thank you.",
+      lessons: [
+        { id: "lois-money-u2-l1", title: "The Give Jar", objective: "Know the first pennies go to give.", teach: "The give jar is first. We give because God gave to us. Church is a happy place to give.", memoryWork: "Give first. God gave to us." },
+        { id: "lois-money-u2-l2", title: "Wait for the Special Thing", objective: "Practice waiting instead of grabbing.", teach: "Wanting is okay. Grabbing is not. We wait, and Mom helps us save.", memoryWork: "Wait. Don't grab." },
+        { id: "lois-money-u2-l3", title: "Thank You, God", objective: "Say thank you for what we have.", teach: "A full heart says thank you even for a little. God likes thankful children.", memoryWork: "Thank you, God, for what I have." },
       ],
     },
   ],
