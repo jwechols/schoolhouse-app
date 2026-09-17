@@ -10,18 +10,15 @@ import { fetchWordLists } from "@/lib/word-lists";
 import { fetchPracticeTests } from "@/lib/practice-tests";
 import { fetchReadingAssignments } from "@/lib/reading-assignments";
 import { isOutsideSchoolToday } from "@/lib/outside-school";
+import { catechismHref } from "@/lib/today-plan";
+import { unlockTTS } from "@/lib/tts";
 import FloatingTutor from "./FloatingTutor";
 
-// One uniform hub for all four kids. Themed per child via .theme-<kid> (accent
-// re-resolves from the design tokens) and driven entirely by the curriculum
-// spine, so Titus, Mercy, Lois, and Truma get the SAME layout, differing only by
-// accent + content. Rebuilt from the Schoolhouse Design System components
-// (tutor medallion, subject cards, primary button).
 const META: Record<string, { name: string; grade: string; tutor: string; tutorEmoji: string; school: string }> = {
   titus: { name: "Titus", grade: "3rd Grade",   tutor: "Buck",            tutorEmoji: "🎣", school: "Brookside Academy" },
   mercy: { name: "Mercy", grade: "Kindergarten", tutor: "Princess Rose",  tutorEmoji: "🌹", school: "Midland Classical Academy" },
   lois:  { name: "Lois",  grade: "Pre-K",         tutor: "Princess Crystal", tutorEmoji: "❄️", school: "Home" },
-  truma: { name: "Truma", grade: "6th Grade",    tutor: "Lydia",          tutorEmoji: "🪻", school: "Midland Classical Academy" },
+  truma: { name: "Truma", grade: "6th Grade",    tutor: "Lydia",          tutorEmoji: "🏻", school: "Midland Classical Academy" },
 };
 
 interface Row {
@@ -40,6 +37,7 @@ export default function SchoolhouseHub({ kidId }: { kidId: string }) {
   const [readingCount, setReadingCount] = useState(0);
 
   useEffect(() => {
+    unlockTTS();
     fetchWordLists({ kidId, active: true }).then((lists) => setWordListCount(lists.length));
     fetchPracticeTests({ kidId, active: true }).then((tests) => setTestCount(tests.length));
     fetchReadingAssignments({ kidId, active: true }).then((rows) => setReadingCount(rows.filter((r) => r.status !== "approved").length));
@@ -66,10 +64,21 @@ export default function SchoolhouseHub({ kidId }: { kidId: string }) {
   const lessonBase = kidId === "truma" ? "/kids/truma/lesson" : `/kids/${kidId}/lesson`;
   const placeBase = kidId === "truma" ? "/kids/truma/placement" : `/kids/${kidId}/placement`;
   const moneyHref = kidId === "truma" ? "/kids/truma/money" : `/kids/${kidId}/money`;
-  const go = (subject: string, lessonId?: string | null) =>
-    router.push(`${lessonBase}?subject=${subject}${lessonId ? `&lessonId=${lessonId}` : ""}`);
+  const catHref = catechismHref(kidId);
+  const go = (href: string) => {
+    unlockTTS();
+    router.push(href);
+  };
+  const goLesson = (subject: string, lessonId?: string | null) =>
+    go(`${lessonBase}?subject=${subject}${lessonId ? `&lessonId=${lessonId}` : ""}`);
 
   const eyebrow: React.CSSProperties = { fontSize: 11, fontWeight: 600, letterSpacing: "0.10em", textTransform: "uppercase", color: "var(--text-muted)" };
+
+  const stationBtn: React.CSSProperties = {
+    width: "100%", display: "flex", alignItems: "center", gap: 14,
+    background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--r-xl)",
+    boxShadow: "var(--sh-sm)", padding: "16px 18px", marginBottom: 16, cursor: "pointer", textAlign: "left",
+  };
 
   return (
     <div className={`theme-${kidId}`} style={{ minHeight: "100vh", background: "var(--surface-page)", color: "var(--text)", fontFamily: "var(--font-ui)" }}>
@@ -78,7 +87,6 @@ export default function SchoolhouseHub({ kidId }: { kidId: string }) {
           ← Home
         </button>
 
-        {/* Header: tutor medallion + greeting */}
         <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 26 }}>
           <div style={{ position: "relative", width: 64, height: 64, flexShrink: 0 }}>
             <div style={{ width: "100%", height: "100%", borderRadius: "var(--r-full)", background: "var(--accent)", color: "var(--accent-contrast)", display: "grid", placeItems: "center", fontFamily: "var(--font-display)", fontWeight: 600, fontSize: 30, boxShadow: "var(--sh-md)" }}>
@@ -95,34 +103,43 @@ export default function SchoolhouseHub({ kidId }: { kidId: string }) {
           </div>
         </div>
 
-        {/* Today's lesson, or an outside-school note in its place */}
         {outsideSchoolToday ? (
-          <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderTop: "4px solid var(--accent)", borderRadius: "var(--r-xl)", boxShadow: "var(--sh-md)", padding: 22, marginBottom: 28 }}>
+          <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderTop: "4px solid var(--accent)", borderRadius: "var(--r-xl)", boxShadow: "var(--sh-md)", padding: 22, marginBottom: 20 }}>
             <div style={{ ...eyebrow, color: "var(--accent-ink)", marginBottom: 8 }}>Today</div>
             <div style={{ fontFamily: "var(--font-display)", fontSize: 26, fontWeight: 600, lineHeight: 1.12, marginBottom: 6 }}>{m.name} is at {m.school} today</div>
-            <div style={{ fontSize: 14, color: "var(--text-muted)" }}>No new lesson today, just school. Everything picks back up on the next home day.</div>
+            <div style={{ fontSize: 14, color: "var(--text-muted)", marginBottom: 16 }}>No new lesson today. Catechism still fits after school.</div>
+            <button onClick={() => go(catHref)} style={{ minHeight: 56, padding: "0 26px", fontSize: 18, fontWeight: 600, borderRadius: "var(--r-full)", background: "var(--accent)", color: "var(--accent-contrast)", border: "none", cursor: "pointer" }}>
+              Catechism →
+            </button>
           </div>
         ) : today && (
-          <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderTop: "4px solid var(--accent)", borderRadius: "var(--r-xl)", boxShadow: "var(--sh-md)", padding: 22, marginBottom: 28 }}>
+          <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderTop: "4px solid var(--accent)", borderRadius: "var(--r-xl)", boxShadow: "var(--sh-md)", padding: 22, marginBottom: 20 }}>
             <div style={{ ...eyebrow, color: "var(--accent-ink)", marginBottom: 8 }}>Today&apos;s lesson</div>
             <div style={{ fontFamily: "var(--font-display)", fontSize: 26, fontWeight: 600, lineHeight: 1.12, marginBottom: 18 }}>{today.title}</div>
             <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
-              <button onClick={() => go(today.subject, today.id)} style={{ minHeight: 56, padding: "0 26px", fontSize: 18, fontWeight: 600, borderRadius: "var(--r-full)", background: "var(--accent)", color: "var(--accent-contrast)", border: "none", cursor: "pointer", boxShadow: "0 2px 0 var(--accent-strong), 0 4px 10px rgba(23,32,58,.14)" }}>
+              <button onClick={() => goLesson(today.subject, today.id)} style={{ minHeight: 56, padding: "0 26px", fontSize: 18, fontWeight: 600, borderRadius: "var(--r-full)", background: "var(--accent)", color: "var(--accent-contrast)", border: "none", cursor: "pointer", boxShadow: "0 2px 0 var(--accent-strong), 0 4px 10px rgba(23,32,58,.14)" }}>
                 Start lesson →
               </button>
-              <button onClick={() => router.push(`${placeBase}?subject=${today.subject}`)} style={{ minHeight: 56, padding: "0 18px", fontSize: 15, fontWeight: 600, borderRadius: "var(--r-full)", background: "transparent", color: "var(--accent-ink)", border: "none", cursor: "pointer" }}>
+              <button onClick={() => go(catHref)} style={{ minHeight: 56, padding: "0 18px", fontSize: 15, fontWeight: 600, borderRadius: "var(--r-full)", background: "transparent", color: "var(--accent-ink)", border: "1px solid var(--border)", cursor: "pointer" }}>
+                Catechism
+              </button>
+              <button onClick={() => go(`${placeBase}?subject=${today.subject}`)} style={{ minHeight: 56, padding: "0 18px", fontSize: 15, fontWeight: 600, borderRadius: "var(--r-full)", background: "transparent", color: "var(--accent-ink)", border: "none", cursor: "pointer" }}>
                 Where do I start?
               </button>
             </div>
           </div>
         )}
 
-        {/* Stewardship: coins, giving, saving, goals — the family economy,
-            backed by the Homeward coin ledger (single source of truth). */}
-        <button
-          onClick={() => router.push(moneyHref)}
-          style={{ width: "100%", display: "flex", alignItems: "center", gap: 14, background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--r-xl)", boxShadow: "var(--sh-sm)", padding: "16px 18px", marginBottom: 28, cursor: "pointer", textAlign: "left" }}
-        >
+        <button onClick={() => go(catHref)} style={stationBtn}>
+          <span style={{ fontSize: 24, width: 44, height: 44, display: "grid", placeItems: "center", background: "var(--accent-tint)", border: "1px solid var(--accent-line)", borderRadius: "var(--r-md)", flexShrink: 0 }}>🕊️</span>
+          <span style={{ flex: 1, minWidth: 0 }}>
+            <span style={{ display: "block", fontFamily: "var(--font-display)", fontSize: 19, fontWeight: 600, color: "var(--text)" }}>Catechism for Boys and Girls</span>
+            <span style={{ display: "block", fontSize: 13, color: "var(--text-muted)" }}>Five questions. Truth &amp; Grace Book 1.</span>
+          </span>
+          <span style={{ fontSize: 20, color: "var(--accent-ink)", flexShrink: 0 }}>→</span>
+        </button>
+
+        <button onClick={() => go(moneyHref)} style={{ ...stationBtn, marginBottom: 28 }}>
           <span style={{ fontSize: 24, width: 44, height: 44, display: "grid", placeItems: "center", background: "var(--accent-tint)", border: "1px solid var(--accent-line)", borderRadius: "var(--r-md)", flexShrink: 0 }}>🪙</span>
           <span style={{ flex: 1, minWidth: 0 }}>
             <span style={{ display: "block", fontFamily: "var(--font-display)", fontSize: 19, fontWeight: 600, color: "var(--text)" }}>My Stewardship</span>
@@ -131,12 +148,8 @@ export default function SchoolhouseHub({ kidId }: { kidId: string }) {
           <span style={{ fontSize: 20, color: "var(--accent-ink)", flexShrink: 0 }}>→</span>
         </button>
 
-        {/* This week's words: vocab/spelling drills Mom assigned */}
         {wordListCount > 0 && (
-          <button
-            onClick={() => router.push(kidId === "truma" ? "/kids/truma/words" : `/kids/${kidId}/words`)}
-            style={{ width: "100%", display: "flex", alignItems: "center", gap: 14, background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--r-xl)", boxShadow: "var(--sh-sm)", padding: "16px 18px", marginBottom: 28, cursor: "pointer", textAlign: "left" }}
-          >
+          <button onClick={() => go(kidId === "truma" ? "/kids/truma/words" : `/kids/${kidId}/words`)} style={stationBtn}>
             <span style={{ fontSize: 24, width: 44, height: 44, display: "grid", placeItems: "center", background: "var(--accent-tint)", border: "1px solid var(--accent-line)", borderRadius: "var(--r-md)", flexShrink: 0 }}>📖</span>
             <span style={{ flex: 1, minWidth: 0 }}>
               <span style={{ display: "block", fontFamily: "var(--font-display)", fontSize: 19, fontWeight: 600, color: "var(--text)" }}>This Week&apos;s Words</span>
@@ -146,12 +159,8 @@ export default function SchoolhouseHub({ kidId }: { kidId: string }) {
           </button>
         )}
 
-        {/* Practice tests Mom assigned */}
         {testCount > 0 && (
-          <button
-            onClick={() => router.push(kidId === "truma" ? "/kids/truma/tests" : `/kids/${kidId}/tests`)}
-            style={{ width: "100%", display: "flex", alignItems: "center", gap: 14, background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--r-xl)", boxShadow: "var(--sh-sm)", padding: "16px 18px", marginBottom: 28, cursor: "pointer", textAlign: "left" }}
-          >
+          <button onClick={() => go(kidId === "truma" ? "/kids/truma/tests" : `/kids/${kidId}/tests`)} style={stationBtn}>
             <span style={{ fontSize: 24, width: 44, height: 44, display: "grid", placeItems: "center", background: "var(--accent-tint)", border: "1px solid var(--accent-line)", borderRadius: "var(--r-md)", flexShrink: 0 }}>🧮</span>
             <span style={{ flex: 1, minWidth: 0 }}>
               <span style={{ display: "block", fontFamily: "var(--font-display)", fontSize: 19, fontWeight: 600, color: "var(--text)" }}>Practice Tests</span>
@@ -161,12 +170,8 @@ export default function SchoolhouseHub({ kidId }: { kidId: string }) {
           </button>
         )}
 
-        {/* Reading Mom assigned */}
         {readingCount > 0 && (
-          <button
-            onClick={() => router.push(kidId === "truma" ? "/kids/truma/reading" : `/kids/${kidId}/reading`)}
-            style={{ width: "100%", display: "flex", alignItems: "center", gap: 14, background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--r-xl)", boxShadow: "var(--sh-sm)", padding: "16px 18px", marginBottom: 28, cursor: "pointer", textAlign: "left" }}
-          >
+          <button onClick={() => go(kidId === "truma" ? "/kids/truma/reading" : `/kids/${kidId}/reading`)} style={{ ...stationBtn, marginBottom: 28 }}>
             <span style={{ fontSize: 24, width: 44, height: 44, display: "grid", placeItems: "center", background: "var(--accent-tint)", border: "1px solid var(--accent-line)", borderRadius: "var(--r-md)", flexShrink: 0 }}>📚</span>
             <span style={{ flex: 1, minWidth: 0 }}>
               <span style={{ display: "block", fontFamily: "var(--font-display)", fontSize: 19, fontWeight: 600, color: "var(--text)" }}>Reading</span>
@@ -176,14 +181,13 @@ export default function SchoolhouseHub({ kidId }: { kidId: string }) {
           </button>
         )}
 
-        {/* Subjects */}
-        <div style={{ ...eyebrow, marginBottom: 12 }}>Subjects</div>
+        <div style={{ ...eyebrow, marginBottom: 12, marginTop: 8 }}>Subjects</div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 14 }}>
           {(rows ?? []).map((r) => {
             const mastered = r.graded > 0 && r.mastery >= MASTERY_PCT;
             const pct = r.total ? Math.round((r.done / r.total) * 100) : 0;
             return (
-              <button key={r.subject} onClick={() => go(r.subject)}
+              <button key={r.subject} onClick={() => goLesson(r.subject)}
                 style={{ textAlign: "left", background: "var(--accent-tint)", border: "1px solid var(--accent-line)", borderRadius: "var(--r-xl)", boxShadow: "var(--sh-sm)", padding: 18, cursor: "pointer", display: "flex", flexDirection: "column", gap: 10, minHeight: 156 }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                   <span style={{ fontSize: 24, width: 44, height: 44, display: "grid", placeItems: "center", background: "var(--surface)", border: "1px solid var(--accent-line)", borderRadius: "var(--r-md)" }}>{r.emoji}</span>
