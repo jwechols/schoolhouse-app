@@ -1,13 +1,5 @@
 import type { Course } from "./types";
 
-// Truma, Home Skills (dialectic stage, 6th grade). Substantive homemaking and life skills
-// for a capable young woman, framed as diligence, service, and hospitality, the heart of
-// Proverbs 31 and Colossians 3:23. Lydia's voice: treat her as a competent steward of a
-// home in training, never talking down. Confessional Reformed Baptist throughout.
-//
-// Life Skills scaffolding adapted from the open skill taxonomy as a coverage map only.
-// Source: github.com/withmarbleapp/os-taxonomy.
-
 export const TRUMA_HOME: Course = {
   kidId: "truma",
   subject: "home",
@@ -16,7 +8,7 @@ export const TRUMA_HOME: Course = {
   gradeLabel: "6th Grade",
   stage: "logic",
   overview:
-    "Real homemaking and life skills for a capable young woman, done as diligent, joyful service to her family and, one day, her own household. Truma learns to clean a room thoroughly, run laundry start to finish, plan and cook a simple meal with kitchen safety, keep a home welcoming through hospitality, and help care for younger siblings. The heart of it is Proverbs 31 diligence and Colossians 3:23: work done heartily, as for the Lord.",
+    "Real homemaking and life skills for a capable young woman, done as diligent, joyful service to her family and, one day, her own household. Truma learns to clean a room thoroughly, run laundry start to finish, plan and cook a simple meal with kitchen safety, keep a home welcoming through hospitality, help care for younger siblings, prepare for the Lord's Day, plan a simple grocery list, mend what tears, and help lead the little ones in family worship.",
   units: [
     {
       id: "truma-home-u1",
@@ -29,6 +21,17 @@ export const TRUMA_HOME: Course = {
         { id: "truma-home-u1-l4", title: "Kitchen Safety & Cleanup", objective: "Work safely in the kitchen and clean up thoroughly.", teach: "The kitchen calls for care: sharp knives cut away from you, hot handles turned inward, and raw meat kept separate from other food (wash hands and boards after). When you finish, clean as you go and wipe every surface, so the kitchen is left better than you found it. Diligence protects the people you're serving.", memoryWork: "Cut away from you, keep raw meat separate, and clean as you go." },
         { id: "truma-home-u1-l5", title: "Hospitality: Welcoming Others", objective: "Prepare a home and a heart to welcome guests.", teach: "Hospitality is making others feel welcome and cared for. Practically, that means a tidy space, a warm greeting, something to eat or drink, and real attention to your guest. Scripture commands it plainly: 'Show hospitality to one another without grumbling' (1 Peter 4:9). A welcoming home is a picture of the welcome we have in Christ.", memoryWork: "'Show hospitality to one another without grumbling' (1 Peter 4:9)." },
         { id: "truma-home-u1-l6", title: "Helping with Younger Siblings", objective: "Care for and lead younger siblings patiently.", teach: "Helping with the little ones is real, weighty work: keeping them safe, playing patiently, helping with snacks or clean-up, and setting a kind example. Your patience and gentleness teach them more than your words. It is training for a lifetime of loving service, and it genuinely lightens your parents' load.", memoryWork: "Care for the little ones with patience; your example teaches them most." },
+      ],
+    },
+    {
+      id: "truma-home-u2",
+      title: "Unit 2 · A Woman Who Builds",
+      summary: "Lord's Day prep, a grocery list, mending, helping family worship.",
+      lessons: [
+        { id: "truma-home-u2-l1", title: "Prepare the Lord's Day", objective: "Get the household ready so Sunday is worship, not scramble.", teach: "The 1689 confession calls the Lord's Day a day set apart for worship. Practically that means Saturday: clothes laid out, a simple breakfast plan, Bibles found, hearts not frantic. A capable daughter who readies the house is doing real ministry, not chores for their own sake.", memoryWork: "The Lord's Day is prepared on Saturday, so Sunday can be worship." },
+        { id: "truma-home-u2-l2", title: "A Simple Grocery List", objective: "Plan meals for a few days and write what is missing.", teach: "Look in the pantry, name three meals, write only what you lack. That is stewardship: not wasting what is already here, not buying on a whim. Proverbs 31 praises a woman who considers a field; you can start by considering the fridge.", memoryWork: "Look first, list second, buy last." },
+        { id: "truma-home-u2-l3", title: "Mend What Tears", objective: "Sew a button or mend a small tear instead of discarding.", teach: "Throwing away what can be mended is a small unfaithfulness. A needle, thread, and a few minutes return a shirt to service. Diligence with little things is the same virtue as diligence with a household (Luke 16:10).", memoryWork: "Mend what you can. Do not throw away a thing that still serves." },
+        { id: "truma-home-u2-l4", title: "Help Lead the Little Ones", objective: "Sit the younger sisters for a psalm, a verse, and a catechism Q.", teach: "Family worship is not a performance. It is a household under the Word. You can read one verse slowly, ask Lois and Mercy the catechism question they already know, and sing a verse of a psalm. That is discipleship, and it is your privilege as the oldest sister.", memoryWork: "The Word in the house: a verse, a question, a psalm." },
       ],
     },
   ],
