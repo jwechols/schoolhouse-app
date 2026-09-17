@@ -58,200 +58,236 @@ function loadBakedManifest(): Promise<Set<string>> {
   return manifestPromise;
 }
 
+const TTS_CACHE_NAME = "schoolhouse-tts-v2";
+const memCache = new Map<string, ArrayBuffer>();
+const inflight = new Map<string, Promise<ArrayBuffer | null>>();
+
+async function cacheGet(key: string): Promise<ArrayBuffer | null> {
+  const hit = memCache.get(key);
+  if (hit) return hit;
+  if (typeof caches === "undefined") return null;
+  try {
+    const cache = await caches.open(TTS_CACHE_NAME);
+    const res = await cache.match(`/tts-cache/${key}`);
+    if (!res) return null;
+    const ab = await res.arrayBuffer();
+    memCache.set(key, ab);
+    return ab;
+  } catch {
+    return null;
+  }
+}
+
+async function cachePut(key: string, ab: ArrayBuffer): Promise<void> {
+  memCache.set(key, ab);
+  if (typeof caches === "undefined") return;
+  try {
+    const cache = await caches.open(TTS_CACHE_NAME);
+    await cache.put(
+      `/tts-cache/${key}`,
+      new Response(ab, { headers: { "Content-Type": "audio/mpeg" } }),
+    );
+  } catch {
+    /* private mode / quota — memory cache still works */
+  }
+}
+
+async function fetchLive(voice: string, text: string): Promise<ArrayBuffer | null> {
+  const spoken = spokenForm(text);
+  const res = await fetch("/api/tts", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ text: spoken, voice, instructions: VOICE_INSTRUCTIONS[voice] }),
+  });
+  return res.ok ? res.arrayBuffer() : null;
+}
+
+/** Resolve audio for a (voice, line): memory → Cache API → baked file → live TTS. */
+async function resolveAudio(voice: string, text: string): Promise<ArrayBuffer | null> {
+  const key = audioKey(voice, text);
+  const cached = await cacheGet(key);
+  if (cached) return cached;
+
+  const existing = inflight.get(key);
+  if (existing) return existing;
+
+  const work = (async () => {
+    const manifest = bakedManifest ?? (await loadBakedManifest());
+    if (manifest.has(key)) {
+      try {
+        const r = await fetch(`/lesson-audio/${key}.mp3`);
+        if (r.ok) {
+          const ab = await r.arrayBuffer();
+          await cachePut(key, ab);
+          return ab;
+        }
+      } catch {
+        /* fall through to live */
+      }
+    }
+    const live = await fetchLive(voice, text);
+    if (live) await cachePut(key, live);
+    return live;
+  })();
+
+  inflight.set(key, work);
+  try {
+    return await work;
+  } finally {
+    inflight.delete(key);
+  }
+}
+
+/** Fire-and-forget: bake the next line into cache while the current one plays. */
+export function prefetchTTS(voice: string, text: string): void {
+  if (!text?.trim()) return;
+  void resolveAudio(voice, text);
+}
+
+/** Wake the Netlify TTS function + load the baked-audio manifest on first tap. */
+export function warmTTS(): void {
+  void loadBakedManifest();
+  if (typeof fetch === "undefined") return;
+  void fetch("/api/tts", { method: "GET", cache: "no-store" }).catch(() => {});
+}
+
 // Break text into chunks so the FIRST chunk (one sentence) can synthesize and
-// start playing fast, while the rest is fetched in parallel. This is what kills
-// the long pause before the tutor starts talking.
+// start playing fast, while the rest is fetched in parallel. Short lines
+// (catechism, buttons) stay one piece so the cache hits next time.
 function chunkText(text: string): string[] {
+  if (text.length <= 180) return [text];
   const sentences = (text.match(/[^.!?]+[.!?]+|\S[^.!?]*$/g) ?? [text])
     .map((s) => s.trim())
     .filter(Boolean);
   if (sentences.length <= 1) return sentences.length ? sentences : [text];
-  const chunks = [sentences[0]];             // first sentence alone → fast start
+  const chunks = [sentences[0]];
   for (let i = 1; i < sentences.length; i += 2) {
-    chunks.push(sentences.slice(i, i + 2).join(" ")); // rest in pairs
+    chunks.push(sentences.slice(i, i + 2).join(" "));
   }
   return chunks;
 }
 
-// App-wide single-voice gate. Every useTTS instance has its OWN AudioContext, so
-// without a shared gate two instances (or stale playback after a fast tap) each
-// keep playing and you hear voices over each other. Any new speak() claims the
-// gate: it stops whatever else is talking and bumps a global turn counter, so any
-// in-flight (awaiting) playback that lost the gate aborts instead of starting.
+// App-wide single-voice gate. Any new speak() claims the gate: it stops
+// whatever else is talking and bumps a global turn counter.
 let globalAudioTurn = 0;
 let stopActiveAudio: (() => void) | null = null;
 
 export function useTTS(voice = "nova") {
-  const audioCtxRef   = useRef<AudioContext | null>(null);
   const audioUnlocked = useRef(false);
-  const sourcesRef    = useRef<AudioBufferSourceNode[]>([]);
-  // HTMLAudio fallback elements (used when there is no AudioContext, e.g. before
-  // unlock or on the pre-baked no-ctx path). Tracked so stopAll can silence them
-  // too, otherwise a `new Audio()` kept playing after Next / navigate / close.
-  const audiosRef     = useRef<HTMLAudioElement[]>([]);
-  const reqIdRef      = useRef(0);
-  // Exposed so UIs can show a pause/resume control while the tutor is talking.
+  const audiosRef = useRef<HTMLAudioElement[]>([]);
+  const reqIdRef = useRef(0);
   const [speaking, setSpeaking] = useState(false);
   const [paused, setPaused] = useState(false);
 
   const unlockAudio = useCallback(() => {
-    if (audioUnlocked.current || typeof window === "undefined") return;
-    const AC = (window as any).AudioContext || (window as any).webkitAudioContext; // eslint-disable-line @typescript-eslint/no-explicit-any
-    if (!AC) return;
-    const ctx = new AC() as AudioContext;
-    audioCtxRef.current = ctx;
-    ctx.resume().then(() => { audioUnlocked.current = true; });
+    if (typeof window === "undefined") return;
+    audioUnlocked.current = true;
+    // iOS: resume a silent AudioContext inside the user gesture so later HTMLAudio plays.
+    try {
+      const AC = (window as unknown as { AudioContext?: typeof AudioContext; webkitAudioContext?: typeof AudioContext }).AudioContext
+        || (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+      if (AC) {
+        const ctx = new AC();
+        void ctx.resume();
+        const buf = ctx.createBuffer(1, 1, 22050);
+        const src = ctx.createBufferSource();
+        src.buffer = buf;
+        src.connect(ctx.destination);
+        src.start(0);
+      }
+    } catch {
+      /* ignore */
+    }
+    warmTTS();
   }, []);
 
   const stopAll = () => {
-    sourcesRef.current.forEach((s) => { try { s.onended = null; s.stop(); } catch { /* already stopped */ } });
-    sourcesRef.current = [];
-    audiosRef.current.forEach((a) => { try { a.onended = null; a.pause(); a.currentTime = 0; a.src = ""; } catch { /* already stopped */ } });
+    audiosRef.current.forEach((a) => {
+      try { a.onended = null; a.onerror = null; a.pause(); a.removeAttribute("src"); a.load(); } catch { /* already stopped */ }
+    });
     audiosRef.current = [];
+  };
+
+  const playBuffer = (ab: ArrayBuffer, live: () => boolean): Promise<void> => {
+    return new Promise((resolve) => {
+      if (!live()) { resolve(); return; }
+      const url = URL.createObjectURL(new Blob([ab], { type: "audio/mpeg" }));
+      const audio = new Audio();
+      audio.preload = "auto";
+      audio.src = url;
+      audiosRef.current.push(audio);
+      const done = () => {
+        URL.revokeObjectURL(url);
+        audiosRef.current = audiosRef.current.filter((el) => el !== audio);
+        resolve();
+      };
+      audio.onended = done;
+      audio.onerror = done;
+      audio.play().catch(done);
+    });
   };
 
   const speak = useCallback(async (text: string, onEnd?: () => void) => {
     if (typeof window === "undefined" || !text.trim()) return;
-    const myId = ++reqIdRef.current; // supersede any earlier speak() on THIS instance
+    const myId = ++reqIdRef.current;
     stopAll();
-    // Claim the app-wide voice: silence any OTHER instance still talking, register
-    // ours, and take a global turn number. `live()` is true only while this call
-    // still owns both its instance and the global gate.
     if (stopActiveAudio && stopActiveAudio !== stopAll) { try { stopActiveAudio(); } catch { /* noop */ } }
     stopActiveAudio = stopAll;
     const turn = ++globalAudioTurn;
     const live = () => myId === reqIdRef.current && turn === globalAudioTurn;
     setPaused(false);
-    const ctx = audioCtxRef.current;
 
-    const fetchAudio = async (t: string): Promise<ArrayBuffer | null> => {
-      // Spoken-only phonetic fix: "Truma" is pronounced "Trooma". This affects the
-      // audio the voice engine reads, never any text shown on screen (she is always
-      // spelled "Truma" everywhere visible).
-      const spoken = t.replace(/Truma/g, "Trooma").replace(/truma/g, "trooma");
-      const res = await fetch("/api/tts", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: spoken, voice, instructions: VOICE_INSTRUCTIONS[voice] }),
-      });
-      return res.ok ? res.arrayBuffer() : null;
+    const finish = () => {
+      if (live()) { setSpeaking(false); setPaused(false); onEnd?.(); }
     };
 
     try {
-      // ── Pre-baked fast path: play the static file if this line was baked ────
-      const key = audioKey(voice, text);
-      const manifest = await loadBakedManifest();
-      if (!live()) return;
-      if (manifest.has(key)) {
-        const ab = await fetch(`/lesson-audio/${key}.mp3`)
-          .then((r) => (r.ok ? r.arrayBuffer() : null))
-          .catch(() => null);
-        if (!live()) return;
-        if (ab) {
-          if (ctx) {
-            if (ctx.state === "suspended") ctx.resume();
-            const buf = await ctx.decodeAudioData(ab);
-            if (!live()) return;
-            const src = ctx.createBufferSource();
-            src.buffer = buf;
-            src.connect(ctx.destination);
-            setSpeaking(true);
-            src.start();
-            sourcesRef.current.push(src);
-            src.onended = () => {
-              sourcesRef.current = sourcesRef.current.filter((s) => s !== src);
-              if (live()) { setSpeaking(false); setPaused(false); onEnd?.(); }
-            };
-            return;
-          }
-          const url = URL.createObjectURL(new Blob([ab], { type: "audio/mpeg" }));
-          const audio = new Audio(url);
-          audiosRef.current.push(audio);
-          audio.onended = () => { URL.revokeObjectURL(url); audiosRef.current = audiosRef.current.filter((a) => a !== audio); if (live()) { setSpeaking(false); onEnd?.(); } };
-          setSpeaking(true);
-          audio.play().catch(() => { setSpeaking(false); onEnd?.(); });
-          return;
-        }
-        // Baked file missing/failed → fall through to live synthesis below.
-      }
-
-      // Fallback (no AudioContext yet): one request, HTMLAudio.
-      if (!ctx) {
-        const ab = await fetchAudio(text);
-        if (!live()) return;
-        if (!ab) { onEnd?.(); return; }
-        const url = URL.createObjectURL(new Blob([ab], { type: "audio/mpeg" }));
-        const audio = new Audio(url);
-        audiosRef.current.push(audio);
-        audio.onended = () => { URL.revokeObjectURL(url); audiosRef.current = audiosRef.current.filter((a) => a !== audio); if (live()) setSpeaking(false); };
-        setSpeaking(true);
-        audio.play().catch(() => { setSpeaking(false); onEnd?.(); });
-        return;
-      }
-
-      if (ctx.state === "suspended") ctx.resume();
+      void loadBakedManifest();
       const chunks = chunkText(text);
-      const lastIdx = chunks.length - 1;
+      // Kick every chunk immediately so #2 is in cache before #1 finishes.
+      const pending = chunks.map((c) => resolveAudio(voice, c));
       setSpeaking(true);
 
-      // Kick off ALL syntheses at once; play them in order as they decode.
-      const decoding = chunks.map(async (c) => {
-        const ab = await fetchAudio(c);
-        return ab ? ctx.decodeAudioData(ab) : null;
-      });
-
-      let cursor = 0; // next scheduled start time (ctx clock)
-      for (let i = 0; i < decoding.length; i++) {
-        let buf: AudioBuffer | null = null;
-        try { buf = await decoding[i]; } catch { buf = null; }
-        if (!live()) return; // superseded mid-flight
+      for (let i = 0; i < pending.length; i++) {
+        let buf: ArrayBuffer | null = null;
+        try { buf = await pending[i]; } catch { buf = null; }
+        if (!live()) return;
         if (!buf) continue;
-        const src = ctx.createBufferSource();
-        src.buffer = buf;
-        src.connect(ctx.destination);
-        const startAt = Math.max(cursor, ctx.currentTime);
-        src.start(startAt);
-        cursor = startAt + buf.duration;
-        sourcesRef.current.push(src);
-        const isLast = i === lastIdx;
-        src.onended = () => {
-          sourcesRef.current = sourcesRef.current.filter((s) => s !== src);
-          if (isLast && live()) { setSpeaking(false); setPaused(false); onEnd?.(); }
-        };
+        await playBuffer(buf, live);
+        if (!live()) return;
       }
+      finish();
     } catch {
-      if (live()) { setSpeaking(false); onEnd?.(); }
+      finish();
     }
+  }, [voice]);
+
+  const prefetch = useCallback((text: string) => {
+    prefetchTTS(voice, text);
   }, [voice]);
 
   const stopAudio = useCallback(() => {
     stopAll();
-    // Release the app-wide gate and bump the turn so any in-flight speak() aborts.
     globalAudioTurn++;
     if (stopActiveAudio === stopAll) stopActiveAudio = null;
     setSpeaking(false);
     setPaused(false);
   }, []);
 
-  // Pause/resume the tutor mid-sentence (suspends this hook's AudioContext).
   const pauseAudio = useCallback(() => {
-    const ctx = audioCtxRef.current;
-    if (ctx && ctx.state === "running") { ctx.suspend(); setPaused(true); }
+    audiosRef.current.forEach((a) => { try { a.pause(); } catch { /* */ } });
+    setPaused(true);
   }, []);
   const resumeAudio = useCallback(() => {
-    const ctx = audioCtxRef.current;
-    if (ctx && ctx.state === "suspended") { ctx.resume(); setPaused(false); }
+    audiosRef.current.forEach((a) => { try { void a.play(); } catch { /* */ } });
+    setPaused(false);
   }, []);
 
-  // When the component using this hook unmounts (leaving the lesson, navigating
-  // away, or closing the tutor), stop any audio immediately so the tutor never
-  // keeps talking after its UI is gone. Bump the global turn so any in-flight
-  // speak() aborts, and release the app-wide voice gate.
   useEffect(() => () => {
     stopAll();
     globalAudioTurn++;
     if (stopActiveAudio === stopAll) stopActiveAudio = null;
   }, []);
 
-  return { speak, unlockAudio, stopAudio, pauseAudio, resumeAudio, speaking, paused };
+  return { speak, prefetch, unlockAudio, stopAudio, pauseAudio, resumeAudio, speaking, paused };
 }
