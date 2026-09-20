@@ -6,6 +6,7 @@ import { fetchWordLists, type WordList, typeLabel, typeEmoji, itemNoun } from "@
 import WordDrill from "./WordDrill";
 import FlashcardStudy from "./FlashcardStudy";
 import MemoryStudy from "./MemoryStudy";
+import MapQuiz from "./MapQuiz";
 
 const META: Record<string, { name: string; color: string }> = {
   titus: { name: "Titus", color: "#2563eb" },
@@ -22,6 +23,7 @@ export default function WordDrillHub({ kidId }: { kidId: string }) {
   const [active, setActive] = useState<WordList | null>(null);
   const [studying, setStudying] = useState<WordList | null>(null);
   const [remembering, setRemembering] = useState<WordList | null>(null);
+  const [mapping, setMapping] = useState(false);
 
   useEffect(() => {
     fetchWordLists({ kidId, active: true }).then(setLists);
@@ -36,15 +38,10 @@ export default function WordDrillHub({ kidId }: { kidId: string }) {
 
   const refresh = () => fetchWordLists({ kidId, active: true }).then(setLists);
 
-  if (active) {
-    return <WordDrill kidId={kidId} list={active} onDone={() => { setActive(null); refresh(); }} />;
-  }
-  if (studying) {
-    return <FlashcardStudy kidId={kidId} list={studying} onDone={() => setStudying(null)} />;
-  }
-  if (remembering) {
-    return <MemoryStudy kidId={kidId} list={remembering} onDone={() => setRemembering(null)} />;
-  }
+  if (mapping) return <MapQuiz kidId={kidId} onDone={() => setMapping(false)} />;
+  if (active) return <WordDrill kidId={kidId} list={active} onDone={() => { setActive(null); refresh(); }} />;
+  if (studying) return <FlashcardStudy kidId={kidId} list={studying} onDone={() => setStudying(null)} />;
+  if (remembering) return <MemoryStudy kidId={kidId} list={remembering} onDone={() => setRemembering(null)} />;
 
   const backHref = kidId === "truma" ? "/hub" : `/kids/${kidId}/hub`;
   const lois = kidId === "lois";
@@ -61,6 +58,24 @@ export default function WordDrillHub({ kidId }: { kidId: string }) {
         <p style={{ color: "var(--text-muted)", marginBottom: 24 }}>
           {lois ? "Tap a card. Princess Crystal will read it." : "Whatever Mom put in this week. Same lists as her phone."}
         </p>
+
+        {!lois && (
+          <button
+            onClick={() => setMapping(true)}
+            style={{
+              textAlign: "left", display: "flex", alignItems: "center", gap: 14, width: "100%",
+              background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--r-xl)",
+              boxShadow: "var(--sh-sm)", padding: "16px 18px", cursor: "pointer", marginBottom: 12,
+            }}
+          >
+            <span style={{ fontSize: 24, width: 44, height: 44, display: "grid", placeItems: "center", background: "var(--accent-tint)", border: "1px solid var(--accent-line)", borderRadius: "var(--r-md)", flexShrink: 0 }}>🗺️</span>
+            <span style={{ flex: 1 }}>
+              <span style={{ display: "block", fontFamily: "var(--font-display)", fontSize: 18, fontWeight: 600 }}>Texas map</span>
+              <span style={{ display: "block", fontSize: 13, color: "var(--text-muted)" }}>Tap the city, region, or border</span>
+            </span>
+            <span style={{ fontSize: 20, color: "var(--accent-ink)" }}>→</span>
+          </button>
+        )}
 
         {lists === null && <p style={{ color: "var(--text-muted)" }}>Loading…</p>}
         {lists?.length === 0 && (
