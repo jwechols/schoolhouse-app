@@ -41,6 +41,10 @@ function pill(bg: string, color: string, children: React.ReactNode, onClick: () 
   );
 }
 
+function wordsHref(kidId: string) {
+  return kidId === "truma" ? "/kids/truma/words" : `/kids/${kidId}/words`;
+}
+
 function KidRow({ row }: { row: KidToday }) {
   const router = useRouter();
   const m = META[row.kidId] ?? META.titus;
@@ -48,6 +52,17 @@ function KidRow({ row }: { row: KidToday }) {
     unlockTTS();
     router.push(href);
   };
+
+  const primaryLabel = row.kidId === "lois"
+    ? "Play \u2192"
+    : row.atSchool
+      ? "Words after school \u2192"
+      : "Start lesson \u2192";
+  const primaryHref = row.kidId === "lois"
+    ? "/kids/lois/play/abc"
+    : row.atSchool
+      ? wordsHref(row.kidId)
+      : row.lessonUrl;
 
   return (
     <div
@@ -69,36 +84,32 @@ function KidRow({ row }: { row: KidToday }) {
             {m.name}
           </div>
           <div style={{ fontSize: 13, color: "var(--muted, #6B6258)", marginTop: 2 }}>
-            {row.atSchool
-              ? `At ${row.schoolName} today`
-              : row.lesson
-                ? `${row.lesson.emoji} ${row.lesson.subjectLabel}: ${row.lesson.title}`
-                : "All caught up"}
+            {row.kidId === "lois"
+              ? "Letters, count, listen"
+              : row.atSchool
+                ? `At ${row.schoolName} today`
+                : row.lesson
+                  ? `${row.lesson.emoji} ${row.lesson.subjectLabel}: ${row.lesson.title}`
+                  : "Words & catechism"}
           </div>
         </div>
         <button
           onClick={() => go(row.hubUrl)}
           style={{ background: "none", border: "none", color: m.color, fontWeight: 700, fontSize: 13, cursor: "pointer", padding: "6px 8px" }}
         >
-          Hub →
+          Hub \u2192
         </button>
       </div>
 
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-        {row.atSchool ? (
-          pill(m.color, m.colorDark, "Catechism · 5 questions", () => go(row.catechismUrl), true)
-        ) : (
-          <>
-            {row.lessonUrl && pill(m.color, m.color, "Start lesson →", () => go(row.lessonUrl!), true)}
-            {pill("#fff", m.colorDark, "Catechism", () => go(row.catechismUrl), false)}
-          </>
-        )}
+        {primaryHref && pill(m.color, m.colorDark, primaryLabel, () => go(primaryHref), true)}
+        {row.kidId !== "lois" && pill("#fff", m.colorDark, "Words", () => go(wordsHref(row.kidId)), false)}
+        {row.kidId === "lois" && pill("#fff", m.colorDark, "Listen", () => go(wordsHref("lois")), false)}
       </div>
     </div>
   );
 }
 
-/** Four kids, one tap each. This is Briana's home screen. */
 export default function TodayBoard({ compact = false }: { compact?: boolean }) {
   const [rows, setRows] = useState<KidToday[] | null>(null);
 
