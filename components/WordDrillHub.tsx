@@ -6,7 +6,6 @@ import { fetchWordLists, type WordList, typeLabel, typeEmoji, itemNoun } from "@
 import WordDrill from "./WordDrill";
 import FlashcardStudy from "./FlashcardStudy";
 import MemoryStudy from "./MemoryStudy";
-import MapQuiz from "./MapQuiz";
 
 const META: Record<string, { name: string; color: string }> = {
   titus: { name: "Titus", color: "#2563eb" },
@@ -23,7 +22,6 @@ export default function WordDrillHub({ kidId }: { kidId: string }) {
   const [active, setActive] = useState<WordList | null>(null);
   const [studying, setStudying] = useState<WordList | null>(null);
   const [remembering, setRemembering] = useState<WordList | null>(null);
-  const [mapping, setMapping] = useState(false);
 
   useEffect(() => {
     fetchWordLists({ kidId, active: true }).then(setLists);
@@ -38,7 +36,6 @@ export default function WordDrillHub({ kidId }: { kidId: string }) {
 
   const refresh = () => fetchWordLists({ kidId, active: true }).then(setLists);
 
-  if (mapping) return <MapQuiz kidId={kidId} onDone={() => setMapping(false)} />;
   if (active) return <WordDrill kidId={kidId} list={active} onDone={() => { setActive(null); refresh(); }} />;
   if (studying) return <FlashcardStudy kidId={kidId} list={studying} onDone={() => setStudying(null)} />;
   if (remembering) return <MemoryStudy kidId={kidId} list={remembering} onDone={() => setRemembering(null)} />;
@@ -50,39 +47,21 @@ export default function WordDrillHub({ kidId }: { kidId: string }) {
     <div style={{ minHeight: "100vh", background: "var(--surface-page)", color: "var(--text)" }}>
       <div style={{ maxWidth: 560, margin: "0 auto", padding: "24px 20px 48px" }}>
         <button onClick={() => router.push(backHref)} style={{ background: "none", border: "none", color: "var(--text-muted)", fontWeight: 600, cursor: "pointer", fontSize: 14, marginBottom: 18 }}>
-          ← Back
+          \u2190 Back
         </button>
         <div style={{ fontFamily: "var(--font-display)", fontSize: 30, fontWeight: 600, marginBottom: 4 }}>
-          {lois ? "Listen" : `${m.name}’s Words`}
+          {lois ? "Listen" : `${m.name}\u2019s Words`}
         </div>
         <p style={{ color: "var(--text-muted)", marginBottom: 24 }}>
           {lois ? "Tap a card. Princess Crystal will read it." : "Whatever Mom put in this week. Same lists as her phone."}
         </p>
 
-        {!lois && (
-          <button
-            onClick={() => setMapping(true)}
-            style={{
-              textAlign: "left", display: "flex", alignItems: "center", gap: 14, width: "100%",
-              background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--r-xl)",
-              boxShadow: "var(--sh-sm)", padding: "16px 18px", cursor: "pointer", marginBottom: 12,
-            }}
-          >
-            <span style={{ fontSize: 24, width: 44, height: 44, display: "grid", placeItems: "center", background: "var(--accent-tint)", border: "1px solid var(--accent-line)", borderRadius: "var(--r-md)", flexShrink: 0 }}>🗺️</span>
-            <span style={{ flex: 1 }}>
-              <span style={{ display: "block", fontFamily: "var(--font-display)", fontSize: 18, fontWeight: 600 }}>Texas map</span>
-              <span style={{ display: "block", fontSize: 13, color: "var(--text-muted)" }}>Tap the city, region, or border</span>
-            </span>
-            <span style={{ fontSize: 20, color: "var(--accent-ink)" }}>→</span>
-          </button>
-        )}
-
-        {lists === null && <p style={{ color: "var(--text-muted)" }}>Loading…</p>}
+        {lists === null && <p style={{ color: "var(--text-muted)" }}>Loading\u2026</p>}
         {lists?.length === 0 && (
           <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--r-xl)", padding: 24 }}>
             <div style={{ fontFamily: "var(--font-display)", fontSize: 20, fontWeight: 600, marginBottom: 6 }}>Nothing from Mom yet</div>
             <p style={{ color: "var(--text-muted)", fontSize: 15, margin: 0 }}>
-              When Mom adds this week’s words, a poem, or a quiz, it shows up right here.
+              When Mom adds this week\u2019s words, a poem, or a quiz, it shows up right here.
             </p>
           </div>
         )}
@@ -104,11 +83,11 @@ export default function WordDrillHub({ kidId }: { kidId: string }) {
               <span style={{ flex: 1, minWidth: 0 }}>
                 <span style={{ display: "block", fontFamily: "var(--font-display)", fontSize: 18, fontWeight: 600 }}>{l.title}</span>
                 <span style={{ display: "block", fontSize: 13, color: "var(--text-muted)" }}>
-                  {typeLabel(l.type)} · {l.words.length} {itemNoun(l.type, l.words.length)}
-                  {l.dueDate ? ` · due ${l.dueDate}` : ""}
+                  {typeLabel(l.type)} \u00b7 {l.words.length} {itemNoun(l.type, l.words.length)}
+                  {l.dueDate ? ` \u00b7 due ${l.dueDate}` : ""}
                 </span>
               </span>
-              <span style={{ fontSize: 20, color: "var(--accent-ink)", flexShrink: 0 }}>→</span>
+              <span style={{ fontSize: 20, color: "var(--accent-ink)", flexShrink: 0 }}>\u2192</span>
             </button>
           ))}
         </div>
