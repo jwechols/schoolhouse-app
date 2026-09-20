@@ -1,17 +1,15 @@
-// ── Word lists: Briana's vocab & spelling drills ─────────────────────────────
-// A lightweight, standalone content type Briana sets and assigns per kid,
-// separate from the curriculum spine. Stored in Supabase `word_lists`, read
-// publicly (anon SELECT) so kid drill screens can fetch without the parent
-// PIN; writes go through /api/word-lists and require the PIN, same gate as
-// curriculum overrides.
+// ── Word lists: Briana's vocab, spelling, and memory ────────────────
+// Lightweight content she assigns per kid, separate from the curriculum spine.
+// Stored in Supabase `word_lists`. Kids fetch without the parent PIN; writes
+// go through /api/word-lists and require the PIN.
 
-export type WordListType = "vocab" | "spelling";
+export type WordListType = "vocab" | "spelling" | "memory";
 
 export interface WordEntry {
   word: string;
-  /** Vocab only. */
+  /** Vocab definition, or unused for spelling/memory. */
   definition?: string;
-  /** Vocab only, optional. */
+  /** Vocab example sentence. For memory, unused (each entry is a line). */
   example?: string;
 }
 
@@ -29,10 +27,11 @@ export interface WordList {
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function rowToWordList(r: any): WordList {
+  const rawType = r.type === "memory" ? "memory" : r.type === "spelling" ? "spelling" : "vocab";
   return {
     id: r.id,
     kidId: r.kid_id,
-    type: r.type,
+    type: rawType,
     title: r.title,
     words: Array.isArray(r.words) ? r.words : [],
     dueDate: r.due_date ?? null,
@@ -43,7 +42,7 @@ export function rowToWordList(r: any): WordList {
 }
 
 export interface WordListDraft {
-  id?: string; // present when editing an existing list
+  id?: string;
   kidId: string;
   type: WordListType;
   title: string;
@@ -52,7 +51,6 @@ export interface WordListDraft {
   active?: boolean;
 }
 
-/** Fetch a kid's lists (kid drill screens use this, no PIN needed). */
 export async function fetchWordLists(opts: { kidId?: string; active?: boolean } = {}): Promise<WordList[]> {
   const params = new URLSearchParams();
   if (opts.kidId) params.set("kidId", opts.kidId);
@@ -63,7 +61,6 @@ export async function fetchWordLists(opts: { kidId?: string; active?: boolean } 
   return (json.lists ?? []) as WordList[];
 }
 
-/** Briana's save (create or update). PIN-gated server-side. */
 export async function saveWordList(draft: WordListDraft): Promise<{ ok: boolean; error?: string; list?: WordList }> {
   const res = await fetch("/api/word-lists", {
     method: "POST",
@@ -80,4 +77,16 @@ export async function deleteWordList(id: string): Promise<{ ok: boolean; error?:
   const json = await res.json().catch(() => ({}));
   if (!res.ok) return { ok: false, error: json.error || "Could not delete." };
   return { ok: true };
+}
+
+export function typeLabel(t: WordListType): string {
+  if (t === "spelling") return "Spelling";
+  if (t === "memory") return "Memory";
+  return "Words";
+}
+
+export function typeEmoji(t: WordListType): string {
+  if (t === "spelling") return "🔤";
+  if (t === "memory") return "🃏";
+  return "📖";
 }

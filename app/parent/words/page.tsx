@@ -3,7 +3,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import WordListEditor from "@/components/WordListEditor";
 
-export const metadata: Metadata = { title: "Words & Drills | Schoolhouse" };
+export const metadata: Metadata = { title: "This week | Schoolhouse" };
 
 export default async function WordsPage() {
   const cookieStore = await cookies();
