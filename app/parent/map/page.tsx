@@ -13,7 +13,7 @@ function Inner() {
 
 export default function ParentMapPage() {
   return (
-    <Suspense fallback={<p style={{ padding: 24 }}>Loading map…</p>}}>
+    <Suspense fallback={<p style={{ padding: 24 }}>Loading map…</p>}>
       <Inner />
     </Suspense>
   );
