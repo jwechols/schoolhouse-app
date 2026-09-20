@@ -97,7 +97,7 @@ function KidRow({ row }: { row: KidToday }) {
           onClick={() => go(row.hubUrl)}
           style={{ background: "none", border: "none", color: m.color, fontWeight: 700, fontSize: 13, cursor: "pointer", padding: "6px 8px" }}
         >
-          Hub \u2192
+          Hub
         </button>
       </div>
 
