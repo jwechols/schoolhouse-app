@@ -65,7 +65,7 @@ export default function MercyDen() {
           Do Words or a lesson. Come back and tap I finished. Pip gets a new look. You also get coins.
         </p>
         <div style={{ background: "#2a1020", borderRadius: 24, padding: 18, textAlign: "center", marginBottom: 16 }}>
-          <div style={{ fontSize: 72, lineHeight: 1 }}>{✨}</div>
+          <div style={{ fontSize: 72, lineHeight: 1 }}>✨</div>
           <p style={{ margin: "8px 0 0", color: "#f4b6d2" }}>
             {unlocked.length ? unlocked.join(" · ") : "Just hatched. First sitting unlocks ears."}
           </p>
