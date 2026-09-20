@@ -47,21 +47,21 @@ export default function WordDrillHub({ kidId }: { kidId: string }) {
     <div style={{ minHeight: "100vh", background: "var(--surface-page)", color: "var(--text)" }}>
       <div style={{ maxWidth: 560, margin: "0 auto", padding: "24px 20px 48px" }}>
         <button onClick={() => router.push(backHref)} style={{ background: "none", border: "none", color: "var(--text-muted)", fontWeight: 600, cursor: "pointer", fontSize: 14, marginBottom: 18 }}>
-          \u2190 Back
+          Back
         </button>
         <div style={{ fontFamily: "var(--font-display)", fontSize: 30, fontWeight: 600, marginBottom: 4 }}>
-          {lois ? "Listen" : `${m.name}\u2019s Words`}
+          {lois ? "Listen" : m.name + "'s Words"}
         </div>
         <p style={{ color: "var(--text-muted)", marginBottom: 24 }}>
           {lois ? "Tap a card. Princess Crystal will read it." : "Whatever Mom put in this week. Same lists as her phone."}
         </p>
 
-        {lists === null && <p style={{ color: "var(--text-muted)" }}>Loading\u2026</p>}
+        {lists === null && <p style={{ color: "var(--text-muted)" }}>Loading...</p>}
         {lists?.length === 0 && (
           <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--r-xl)", padding: 24 }}>
             <div style={{ fontFamily: "var(--font-display)", fontSize: 20, fontWeight: 600, marginBottom: 6 }}>Nothing from Mom yet</div>
             <p style={{ color: "var(--text-muted)", fontSize: 15, margin: 0 }}>
-              When Mom adds this week\u2019s words, a poem, or a quiz, it shows up right here.
+              When Mom adds this week's words, a poem, or a quiz, it shows up right here.
             </p>
           </div>
         )}
@@ -83,11 +83,10 @@ export default function WordDrillHub({ kidId }: { kidId: string }) {
               <span style={{ flex: 1, minWidth: 0 }}>
                 <span style={{ display: "block", fontFamily: "var(--font-display)", fontSize: 18, fontWeight: 600 }}>{l.title}</span>
                 <span style={{ display: "block", fontSize: 13, color: "var(--text-muted)" }}>
-                  {typeLabel(l.type)} \u00b7 {l.words.length} {itemNoun(l.type, l.words.length)}
-                  {l.dueDate ? ` \u00b7 due ${l.dueDate}` : ""}
+                  {typeLabel(l.type)} - {l.words.length} {itemNoun(l.type, l.words.length)}
+                  {l.dueDate ? ` - due ${l.dueDate}` : ""}
                 </span>
               </span>
-              <span style={{ fontSize: 20, color: "var(--accent-ink)", flexShrink: 0 }}>\u2192</span>
             </button>
           ))}
         </div>
