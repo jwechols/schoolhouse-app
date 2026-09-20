@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { fetchWordLists, type WordList, typeLabel, typeEmoji } from "@/lib/word-lists";
+import { fetchWordLists, type WordList, typeLabel, typeEmoji, itemNoun } from "@/lib/word-lists";
 import WordDrill from "./WordDrill";
 import FlashcardStudy from "./FlashcardStudy";
 import MemoryStudy from "./MemoryStudy";
@@ -30,6 +30,7 @@ export default function WordDrillHub({ kidId }: { kidId: string }) {
   function open(l: WordList) {
     if (l.type === "memory") setRemembering(l);
     else if (l.type === "vocab") setPicking(l);
+    else if (l.type === "facts") setStudying(l);
     else setActive(l);
   }
 
@@ -58,7 +59,7 @@ export default function WordDrillHub({ kidId }: { kidId: string }) {
           {lois ? "Listen" : `${m.name}’s Words`}
         </div>
         <p style={{ color: "var(--text-muted)", marginBottom: 24 }}>
-          {lois ? "Tap a card. Princess Crystal will read it." : "Words, spelling, and memory from Mom."}
+          {lois ? "Tap a card. Princess Crystal will read it." : "Whatever Mom put in this week. Same lists as her phone."}
         </p>
 
         {lists === null && <p style={{ color: "var(--text-muted)" }}>Loading…</p>}
@@ -66,7 +67,7 @@ export default function WordDrillHub({ kidId }: { kidId: string }) {
           <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--r-xl)", padding: 24 }}>
             <div style={{ fontFamily: "var(--font-display)", fontSize: 20, fontWeight: 600, marginBottom: 6 }}>Nothing from Mom yet</div>
             <p style={{ color: "var(--text-muted)", fontSize: 15, margin: 0 }}>
-              When Mom puts in this week’s words or a poem, it shows up right here.
+              When Mom adds this week’s words, a poem, or a quiz, it shows up right here.
             </p>
           </div>
         )}
@@ -88,7 +89,7 @@ export default function WordDrillHub({ kidId }: { kidId: string }) {
               <span style={{ flex: 1, minWidth: 0 }}>
                 <span style={{ display: "block", fontFamily: "var(--font-display)", fontSize: 18, fontWeight: 600 }}>{l.title}</span>
                 <span style={{ display: "block", fontSize: 13, color: "var(--text-muted)" }}>
-                  {typeLabel(l.type)} · {l.words.length} {l.type === "memory" ? (l.words.length === 1 ? "line" : "lines") : (l.words.length === 1 ? "word" : "words")}
+                  {typeLabel(l.type)} · {l.words.length} {itemNoun(l.type, l.words.length)}
                   {l.dueDate ? ` · due ${l.dueDate}` : ""}
                 </span>
               </span>

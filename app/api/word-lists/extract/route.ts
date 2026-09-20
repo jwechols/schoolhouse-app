@@ -10,12 +10,23 @@ async function isParent(): Promise<boolean> {
   return process.env.PARENT_AUTH_ENFORCE === "0" || (!!process.env.PARENT_PIN && pin === process.env.PARENT_PIN);
 }
 
-type ExtractType = "vocab" | "spelling" | "memory";
+type ExtractType = "vocab" | "spelling" | "memory" | "facts";
 
 function saveWordsTool(type: ExtractType): Anthropic.Tool {
+  const wordDesc =
+    type === "memory"
+      ? "One line of the poem or verse."
+      : type === "facts"
+        ? "The question, as the child should hear it. Example: Capital of Texas"
+        : "The word.";
   return {
     name: "save_words",
-    description: type === "memory" ? "Return the poem, verse, or memory piece as ordered lines." : "Return every word found in the photo, in reading order.",
+    description:
+      type === "memory"
+        ? "Return the poem, verse, or memory piece as ordered lines."
+        : type === "facts"
+          ? "Return every quiz item as a question and its answer."
+          : "Return every word found in the photo, in reading order.",
     input_schema: {
       type: "object",
       properties: {
@@ -25,14 +36,16 @@ function saveWordsTool(type: ExtractType): Anthropic.Tool {
           items: {
             type: "object",
             properties: {
-              word: { type: "string", description: type === "memory" ? "One line of the poem or verse." : "The word." },
+              word: { type: "string", description: wordDesc },
               definition:
                 type === "vocab"
                   ? { type: "string", description: "Required. A short, kid-level definition." }
-                  : { type: "string", description: "Omit." },
+                  : type === "facts"
+                    ? { type: "string", description: "Required. The answer. Short." }
+                    : { type: "string", description: "Omit." },
               example: { type: "string", description: "Vocab only, optional." },
             },
-            required: type === "vocab" ? ["word", "definition"] : ["word"],
+            required: type === "vocab" || type === "facts" ? ["word", "definition"] : ["word"],
           },
         },
       },
@@ -69,7 +82,9 @@ export async function POST(req: NextRequest) {
       ? "This is a vocabulary list or worksheet. Every single word MUST get a definition field. If the photo already shows a definition, use it. If it doesn't, YOU write a short kid-level definition. Add a brief example sentence when you can."
       : type === "memory"
         ? "This is a poem, verse, catechism answer, or nursery rhyme. Extract the title if printed, then each line in order as its own word field. Keep the wording. Do not paraphrase. Skip page numbers and decorations."
-        : "This is a spelling list. Extract just the words, in order. Ignore instructions, headers, or unrelated text.";
+        : type === "facts"
+          ? "This is homework to quiz: a map worksheet, geography facts, history dates, science terms, or labeled diagram. Turn each item into a short question (word) and the answer (definition). Examples: word='Capital of Texas', definition='Austin'; word='The river that forms Texas's southern border', definition='Rio Grande'. If the page is a map with labeled places, make a question for each label. Skip decorations and instructions."
+          : "This is a spelling list. Extract just the words, in order. Ignore instructions, headers, or unrelated text.";
 
   try {
     const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
