@@ -45,7 +45,7 @@ export default function FamilyLanding() {
       body: JSON.stringify({ mode: "parent", pin: pin.trim() }),
     });
     if (res.ok) {
-      router.push("/teacher");
+      router.push("/parent/words");
     } else {
       setError("Wrong PIN, try again!");
       setPin("");
@@ -86,7 +86,7 @@ export default function FamilyLanding() {
             <div style={{ ...eyebrow, color: "var(--ink-3)", marginBottom: 14 }}>Verse of the day</div>
             <div style={{ fontFamily: "var(--font-scripture)", fontSize: 25, fontWeight: 500,
               color: "var(--ink-2)", lineHeight: 1.5 }}>
-              &ldquo;{verse.text}&rdquo;
+              “{verse.text}”
             </div>
             <div style={{ fontFamily: "var(--font-body)", fontSize: 12.5, letterSpacing: "0.1em",
               textTransform: "uppercase", color: GREEN, marginTop: 16 }}>
@@ -106,7 +106,7 @@ export default function FamilyLanding() {
             </h1>
             <p style={{ fontFamily: "var(--font-body)", fontSize: 14, color: "var(--muted)",
               marginTop: 8, marginBottom: 0 }}>
-              Next lesson or catechism. Hub is still there if you need it.
+              Hand a child their card. Mom puts this week’s words in after the PIN.
             </p>
           </div>
 
@@ -138,14 +138,7 @@ export default function FamilyLanding() {
                     border: "1px solid var(--border)", background: "#ffffff",
                     borderRadius: 10, padding: "11px 16px", fontFamily: "var(--font-body)",
                     fontWeight: 500, fontSize: 13.5, color: "var(--ink-2)" }}>
-                  <span aria-hidden>🔑</span> Parent &amp; Homeroom
-                </button>
-                <button onClick={() => router.push("/plan")}
-                  style={{ display: "inline-flex", alignItems: "center", gap: 9, cursor: "pointer",
-                    border: "1px solid var(--border)", background: "#ffffff",
-                    borderRadius: 10, padding: "11px 16px", fontFamily: "var(--font-body)",
-                    fontWeight: 500, fontSize: 13.5, color: "var(--ink-2)" }}>
-                  <span aria-hidden>📚</span> Lesson Plan
+                  <span aria-hidden>🔑</span> This week’s words
                 </button>
               </div>
             ) : <span />}
@@ -193,7 +186,7 @@ export default function FamilyLanding() {
                     style={{ flex: 2, padding: "12px", borderRadius: 10, border: "none",
                       background: GREEN, fontFamily: "var(--font-body)", fontWeight: 600, fontSize: 14,
                       color: "#fff", cursor: "pointer", opacity: (!pin.trim() || loading) ? 0.4 : 1 }}>
-                    {loading ? "Checking…" : "Open Station →"}
+                    {loading ? "Checking…" : "Put this week in \u2192"}
                   </button>
                 </div>
               </form>
