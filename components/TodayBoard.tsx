@@ -43,9 +43,6 @@ function pill(bg: string, color: string, children: React.ReactNode, onClick: () 
 function wordsHref(kidId: string) {
   return kidId === "truma" ? "/kids/truma/words" : `/kids/${kidId}/words`;
 }
-function mapHref(kidId: string) {
-  return kidId === "truma" ? "/kids/truma/map" : `/kids/${kidId}/map`;
-}
 function faithHref(kidId: string) {
   return kidId === "truma" ? "/kids/truma/catechism" : `/kids/${kidId}/catechism`;
 }
@@ -92,10 +89,10 @@ function KidRow({ row }: { row: KidToday }) {
             {row.kidId === "lois"
               ? "Letters, count, listen"
               : row.atSchool
-                ? `School day · practice after`
+                ? "School day \u00b7 practice after"
                 : row.lesson
                   ? `Next: ${row.lesson.subjectLabel}`
-                  : "Words, map, catechism"}
+                  : "Words and catechism"}
           </div>
         </div>
         <button
@@ -113,7 +110,6 @@ function KidRow({ row }: { row: KidToday }) {
         ) : (
           <>
             {pill("#fff", m.colorDark, "Words", () => go(wordsHref(row.kidId)), false)}
-            {pill("#fff", m.colorDark, "Texas map", () => go(mapHref(row.kidId)), false)}
             {pill("#fff", m.colorDark, "Catechism", () => go(faithHref(row.kidId)), false)}
           </>
         )}
