@@ -8,6 +8,7 @@
 [build.environment]
   NODE_VERSION = "20"
 
+# Redeploy kick 2026-09-20
 # The version marker must never be cached — the app polls it to detect new
 # deploys and reload itself. If this were cached, the whole mechanism breaks.
 [[headers]]
