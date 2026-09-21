@@ -82,10 +82,10 @@ function KidRow({ row }: { row: KidToday }) {
       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
         <span style={{ fontSize: 28, lineHeight: 1 }}>{m.emoji}</span>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontFamily: "var(--font-scripture, Georgia)", fontWeight: 600, fontSize: 22, color: m.color, lineHeight: 1.1 }}>
+          <div style={{ fontFamily: "var(--font-scripture, Georgia)", fontWeight: 600, fontSize: 22, color: m.colorDark, lineHeight: 1.1 }}>
             {m.name}
           </div>
-          <div style={{ fontSize: 13, color: "var(--muted, #6B6258)", marginTop: 2 }}>
+          <div style={{ fontSize: 13, color: "var(--text-muted)", marginTop: 2 }}>
             {row.kidId === "lois"
               ? "Letters, count, listen"
               : row.atSchool
@@ -97,12 +97,11 @@ function KidRow({ row }: { row: KidToday }) {
         </div>
         <button
           onClick={() => go(row.hubUrl)}
-          style={{ background: "none", border: "none", color: m.color, fontWeight: 700, fontSize: 13, cursor: "pointer", padding: "6px 8px" }}
+          style={{ background: "none", border: "none", color: m.colorDark, fontWeight: 700, fontSize: 14, cursor: "pointer", padding: "6px 8px" }}
         >
           Hub
         </button>
       </div>
-
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
         {primaryHref && pill(m.color, m.colorDark, primaryLabel, () => go(primaryHref), true)}
         {row.kidId === "lois" ? (
@@ -120,14 +119,11 @@ function KidRow({ row }: { row: KidToday }) {
 
 export default function TodayBoard({ compact = false }: { compact?: boolean }) {
   const [rows, setRows] = useState<KidToday[] | null>(null);
-
   useEffect(() => {
     setRows(familyToday());
     unlockTTS();
   }, []);
-
   if (!rows) return <div style={{ minHeight: 120 }} />;
-
   return (
     <div style={{
       display: "grid",
