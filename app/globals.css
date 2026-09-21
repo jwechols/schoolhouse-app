@@ -116,6 +116,16 @@ h1, h2, h3 { letter-spacing: -0.01em; }
 .bg-lois   { background: linear-gradient(160deg, #f3ead8 0%, #fae8ff 55%, #f3ead8 100%); }
 .bg-truma  { background: linear-gradient(160deg, #f3ead8 0%, #d7f2f4 55%, #f3ead8 100%); }
 
+/* Lift leftover mid-gray inline captions (Bible, editors) to readable ink */
+[style*="#888"],
+[style*="#999"],
+[style*="#5c5b4a"],
+[style*="#6B6258"],
+[style*="#6b6258"],
+[style*="#8a8875"] {
+  color: var(--text-muted) !important;
+}
+
 @keyframes pulseDot {
   0%, 100% { box-shadow: 0 0 0 0 currentColor; opacity: 1; }
   50%       { box-shadow: 0 0 7px 2px currentColor; opacity: .75; }
