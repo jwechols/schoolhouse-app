@@ -68,7 +68,7 @@ export default function FamilyLaunchMode({ onClose }: Props) {
             style={{
               fontFamily: "system-ui, -apple-system, sans-serif",
               fontSize: 13,
-              color: "#6B6258",
+              color: "var(--text-muted)",
               margin: "2px 0 0",
             }}
           >
@@ -97,7 +97,7 @@ export default function FamilyLaunchMode({ onClose }: Props) {
             boxShadow: "0 2px 8px rgba(50,68,70,0.07)",
           }}
         >
-          ✕ Back
+          Back
         </button>
       </div>
 
@@ -113,7 +113,7 @@ export default function FamilyLaunchMode({ onClose }: Props) {
               background: "none",
               border: "none",
               fontSize: 12,
-              color: "rgba(50,68,70,0.3)",
+              color: "var(--text-muted)",
               cursor: "pointer",
               fontFamily: "system-ui, -apple-system, sans-serif",
               padding: "8px 16px",
@@ -133,9 +133,9 @@ export default function FamilyLaunchMode({ onClose }: Props) {
             fontFamily: "system-ui, -apple-system, sans-serif",
           }}>
             <span style={{ fontSize: 14, fontWeight: 600, color: "#5a4000" }}>
-              ⚠️ Clear ALL kids&apos; progress, coins, and catechism data?
+              Clear ALL kids' progress, coins, and catechism data?
             </span>
-            <span style={{ fontSize: 12, color: "#7a5800" }}>This can&apos;t be undone.</span>
+            <span style={{ fontSize: 12, color: "#7a5800" }}>This can't be undone.</span>
             <div style={{ display: "flex", gap: 10, marginTop: 4 }}>
               <button
                 onPointerDown={handleReset}
@@ -168,7 +168,7 @@ export default function FamilyLaunchMode({ onClose }: Props) {
             borderRadius: 10, fontSize: 14, fontWeight: 600, color: "#155724",
             fontFamily: "system-ui, -apple-system, sans-serif",
           }}>
-            ✅ All progress cleared, fresh start!
+            All progress cleared, fresh start!
           </div>
         )}
       </div>
@@ -180,10 +180,10 @@ export default function FamilyLaunchMode({ onClose }: Props) {
           fontFamily: "system-ui, -apple-system, sans-serif",
           fontStyle: "italic",
           fontSize: 13,
-          color: "rgba(50,68,70,0.38)",
+          color: "var(--text-muted)",
         }}
       >
-        &ldquo;Train up a child in the way he should go&rdquo; &mdash; Prov. 22:6
+        "Train up a child in the way he should go" — Prov. 22:6
       </div>
     </div>
   );
