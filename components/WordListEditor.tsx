@@ -36,9 +36,20 @@ const KINDS: { id: WordListType; label: string; hint: string }[] = [
   { id: "facts", label: "Study guide", hint: "science, history, map, anything to quiz" },
 ];
 
+function readQuery() {
+  if (typeof window === "undefined") return { kid: "titus", type: "vocab" as WordListType, capture: false, roll: false };
+  const q = new URLSearchParams(window.location.search);
+  const kid = KIDS.some((k) => k.id === q.get("kid")) ? (q.get("kid") as string) : "titus";
+  const raw = q.get("type");
+  const type: WordListType =
+    raw === "spelling" || raw === "memory" || raw === "facts" ? raw : "vocab";
+  return { kid, type, capture: q.get("capture") === "1", roll: q.get("roll") === "1" };
+}
+
 export default function WordListEditor() {
-  const [kid, setKid] = useState("titus");
-  const [type, setType] = useState<WordListType>("vocab");
+  const start = readQuery();
+  const [kid, setKid] = useState(start.kid);
+  const [type, setType] = useState<WordListType>(start.type);
   const [lists, setLists] = useState<WordList[]>([]);
   const [title, setTitle] = useState("");
   const [words, setWords] = useState<WordEntry[]>([]);
@@ -54,9 +65,18 @@ export default function WordListEditor() {
   }
   useEffect(() => {
     reload();
-    if (kid === "lois") setType("memory");
+    if (kid === "lois" && type === "vocab") setType("memory");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [kid]);
+
+  useEffect(() => {
+    const t = setTimeout(() => {
+      if (start.capture) cameraRef.current?.click();
+      else if (start.roll) rollRef.current?.click();
+    }, 400);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function flash(msg: string) {
     setToast(msg);
