@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 
 type Mode = "work" | "break";
 
@@ -84,6 +84,23 @@ function todayKey() {
 
 export default function FocusTimer() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const kidId = (searchParams.get("kid") || "truma").toLowerCase();
+  const hubHref = useMemo(() => {
+    if (kidId === "truma") return "/hub";
+    if (kidId === "titus" || kidId === "mercy" || kidId === "lois") return `/kids/${kidId}/hub`;
+    return "/hub";
+  }, [kidId]);
+  const hubLabel = useMemo(() => {
+    const names: Record<string, string> = {
+      truma: "Truma",
+      titus: "Titus",
+      mercy: "Mercy",
+      lois: "Lois",
+    };
+    const name = names[kidId] || "Schoolhouse";
+    return `← ${name}'s hub`;
+  }, [kidId]);
   const saved = useRef(loadState());
 
   const [mode, setMode] = useState<Mode>("work");
@@ -293,7 +310,7 @@ export default function FocusTimer() {
     >
       <div style={{ maxWidth: 520, margin: "0 auto" }}>
         <button
-          onClick={() => router.push("/kids/truma/hub")}
+          onClick={() => router.push(hubHref)}
           style={{
             background: "none",
             border: "none",
@@ -306,7 +323,7 @@ export default function FocusTimer() {
             minHeight: 44,
           }}
         >
-          ← Truma&apos;s hub
+          {hubLabel}
         </button>
 
         <div style={{ textAlign: "center", marginBottom: 8 }}>
