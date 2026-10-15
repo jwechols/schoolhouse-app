@@ -165,6 +165,16 @@ export default function SchoolhouseHub({ kidId }: { kidId: string }) {
               </span>
               <span style={{ fontSize: 20, color: "var(--accent-ink)", flexShrink: 0 }}>→</span>
             </button>
+            {kidId === "truma" && (
+              <button onClick={() => go("/focus")} style={stationBtn}>
+                <span style={{ fontSize: 24, width: 44, height: 44, display: "grid", placeItems: "center", background: "var(--accent-tint)", border: "1px solid var(--accent-line)", borderRadius: "var(--r-md)", flexShrink: 0 }}>⏱️</span>
+                <span style={{ flex: 1, minWidth: 0 }}>
+                  <span style={{ display: "block", fontFamily: "var(--font-display)", fontSize: 19, fontWeight: 600, color: "var(--text)" }}>Focus timer</span>
+                  <span style={{ display: "block", fontSize: 13, color: "var(--text-muted)" }}>Quiet work and break times</span>
+                </span>
+                <span style={{ fontSize: 20, color: "var(--accent-ink)", flexShrink: 0 }}>→</span>
+              </button>
+            )}
           </>
         )}
 
