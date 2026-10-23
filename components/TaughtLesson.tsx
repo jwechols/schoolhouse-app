@@ -9,7 +9,7 @@ import { courseProgress, markLessonComplete } from "@/lib/curriculum-spine/progr
 import { courseSequence } from "@/lib/curriculum-spine/types";
 import { saveResult, MASTERY_PCT } from "@/lib/curriculum-spine/results";
 import { queueSignoff } from "@/lib/curriculum-spine/signoff";
-import { reportLessonToHomeward, subjectToTitle, dailyLessonId, TIER_META, type LessonTier } from "@/lib/homeward";
+import { formatDollars, isDailyCap, reportLessonToHomeward, type CreditResult, subjectToTitle, dailyLessonId, TIER_META, type LessonTier } from "@/lib/homeward";
 import type { SpineLesson } from "@/lib/curriculum-spine/types";
 
 const TUTOR: Record<string, { name: string; emoji: string }> = {
@@ -124,6 +124,7 @@ export default function TaughtLesson({ kidId, subject, lesson }: Props) {
 
   const quiz = lesson.quiz ?? [];
   const [phase, setPhase] = useState<Phase>("teach");
+  const [credit, setCredit] = useState<CreditResult | null>(null);
   const [qIndex, setQIndex] = useState(0);
   const [selected, setSelected] = useState<number | null>(null);
   const [correctCount, setCorrectCount] = useState(0);
@@ -372,7 +373,7 @@ export default function TaughtLesson({ kidId, subject, lesson }: Props) {
         // Coins are minted in Homeward (the single family ledger), not locally.
         // Report the lesson with its tier; Homeward credits the coins + splits at payday.
         const minutesEarned = Math.max(0, Math.round((Date.now() - startTime.current) / 60000));
-        reportLessonToHomeward({ kid: kidId, subject, lessonId: dailyLessonId(kidId, subject), minutesEarned, lessonTitle: subjectToTitle(subject), tier: (lesson.tier ?? "standard") as LessonTier });
+        reportLessonToHomeward({ kid: kidId, subject, lessonId: dailyLessonId(kidId, subject), minutesEarned, lessonTitle: subjectToTitle(subject), tier: (lesson.tier ?? "standard") as LessonTier }).then(setCredit);
       }
     }
     setPhase("result");
@@ -421,10 +422,15 @@ export default function TaughtLesson({ kidId, subject, lesson }: Props) {
 
         {mastered && (
           <>
+            {credit?.credited === true && (
             <div className="mb-3 px-5 py-3 rounded-2xl font-black text-base shadow-md"
               style={{ background: "linear-gradient(135deg, #FFFBEB, #FEF3C7)", border: "2px solid #F59E0B", color: "#92400E" }}>
-              🪙 +{TIER_META[(lesson.tier ?? "standard") as LessonTier].coins} coins earned, a brain gig!
+              +{formatDollars(credit.dollars)} earned!
             </div>
+            )}
+            {isDailyCap(credit) && (
+            <div className="mb-3 px-5 py-3 rounded-2xl font-bold text-base text-gray-700">Lessons are done for today</div>
+            )}
             <div className="mb-6 px-5 py-3 rounded-2xl font-bold text-sm shadow-sm"
               style={{ background: `${colorHex}12`, border: `1.5px solid ${colorHex}30`, color: colorHex }}>
               📋 Sent to Mom for sign-off

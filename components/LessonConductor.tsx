@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { KIDS } from "@/lib/kids";
 import type { KidId } from "@/lib/kids";
 import type { LessonTurnRequest } from "@/app/api/lesson/route";
-import { reportLessonToHomeward, subjectToTitle, dailyLessonId, TIER_META, tierForDuration, type LessonTier } from "@/lib/homeward";
+import { formatDollars, isDailyCap, reportLessonToHomeward, subjectToTitle, dailyLessonId, TIER_META, tierForDuration, type LessonTier } from "@/lib/homeward";
 import { getCourse } from "@/lib/curriculum-spine";
 import { courseProgress, markLessonComplete } from "@/lib/curriculum-spine/progress";
 import { saveResult } from "@/lib/curriculum-spine/results";
@@ -154,7 +154,8 @@ export default function LessonConductor({ kidId, subject, durationMinutes, paren
   const [selectedChoice, setSelectedChoice] = useState<number | null>(null);
   const [answerFeedback, setAnswerFeedback] = useState<"correct" | "incorrect" | null>(null);
   const [isStreaming, setIsStreaming] = useState(false);
-  const [earnedCoins, setEarnedCoins] = useState(0);
+  const [earnedDollars, setEarnedDollars] = useState<string | null>(null);
+  const [creditCapped, setCreditCapped] = useState(false);
   // The curriculum-spine lesson this session teaches (if the subject has a course).
   // Captured once so it stays stable across turns; marked complete when the lesson ends.
   const spineLessonRef = useRef<SpineLesson | null>(null);
@@ -219,7 +220,6 @@ export default function LessonConductor({ kidId, subject, durationMinutes, paren
     const lessonTier: LessonTier = tier ?? tierForDuration(durationMinutes);
     const elapsedSeconds = Math.round((Date.now() - lessonStartTime.current) / 1000);
     const minutesEarned = Math.round(elapsedSeconds / 60);
-    if (minutesEarned >= 5) setEarnedCoins(TIER_META[lessonTier].coins);
     reportLessonToHomeward({
       kid: kidId,
       subject,
@@ -227,6 +227,10 @@ export default function LessonConductor({ kidId, subject, durationMinutes, paren
       minutesEarned,
       lessonTitle: subjectToTitle(subject),
       tier: lessonTier,
+    }).then((r) => {
+      // Only claim money when Homeward actually credited it.
+      if (r?.credited === true) setEarnedDollars(formatDollars(r.dollars));
+      else if (isDailyCap(r)) setCreditCapped(true);
     });
   }, [state.phase, kidId, subject]);
 
@@ -646,10 +650,15 @@ export default function LessonConductor({ kidId, subject, durationMinutes, paren
             </ul>
           </div>
         )}
-        {earnedCoins > 0 && (
+        {earnedDollars && (
           <div className="mb-6 px-5 py-3 rounded-2xl font-black text-base shadow-md"
             style={{ background: "linear-gradient(135deg, #FFFBEB, #FEF3C7)", border: "2px solid #F59E0B", color: "#92400E" }}>
-            🪙 +{earnedCoins} coins earned, a brain gig!
+            +{earnedDollars} earned!
+          </div>
+        )}
+        {!earnedDollars && creditCapped && (
+          <div className="mb-6 px-5 py-3 rounded-2xl font-bold text-base text-gray-700">
+            Lessons are done for today
           </div>
         )}
         <button

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { reportLessonToHomeward, TIER_META, type LessonTier } from "@/lib/homeward";
+import { formatDollars, isDailyCap, reportLessonToHomeward, type CreditResult, TIER_META, type LessonTier } from "@/lib/homeward";
 import { MASTERY_PCT } from "@/lib/curriculum-spine/results";
 import type { PracticeTest } from "@/lib/practice-tests";
 
@@ -27,6 +27,7 @@ export default function PracticeTestRunner({ kidId, test, onDone }: Props) {
   const [chosen, setChosen] = useState<number | null>(null);
   const [phase, setPhase] = useState<"prompt" | "answered" | "results">("prompt");
   const [reported, setReported] = useState(false);
+  const [credit, setCredit] = useState<CreditResult | null>(null);
 
   const current = test.questions[index];
   const isLast = index === test.questions.length - 1;
@@ -63,7 +64,7 @@ export default function PracticeTestRunner({ kidId, test, onDone }: Props) {
         minutesEarned: TIER_META[tier].minutes,
         lessonTitle: test.title,
         tier,
-      });
+      }).then(setCredit);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase]);
@@ -81,7 +82,7 @@ export default function PracticeTestRunner({ kidId, test, onDone }: Props) {
           <p style={{ color: "var(--text-muted)", marginTop: 4 }}>{pct}% on {test.title}</p>
           {mastered ? (
             <p style={{ marginTop: 12, color: "var(--success-ink)", fontWeight: 600 }}>
-              Nice work! That earned a {TIER_META[tier].label.toLowerCase()} credit in Homeward.
+              {credit?.credited === true ? `Nice work! +${formatDollars(credit.dollars)} earned!` : isDailyCap(credit) ? "Lessons are done for today" : "Lesson done!"}
             </p>
           ) : (
             <p style={{ marginTop: 12, color: "var(--text-muted)" }}>
