@@ -5,6 +5,7 @@
 // depend on Homeward being up.
 
 import { NextRequest, NextResponse } from "next/server";
+import { gateProxy, sameOrigin } from "@/lib/api-gate";
 
 const HOMEWARD_URL = "https://homeward.echols.family/.netlify/functions/schoolhouse-today";
 const KIDS = new Set(["truma", "titus", "mercy", "lois"]);
@@ -14,6 +15,7 @@ function str(v: unknown, max: number): string | null {
 }
 
 export async function POST(req: NextRequest) {
+  if (!sameOrigin(req)) return NextResponse.json({ ok: false, error: "forbidden" }, { status: 403 });
   const secret = process.env.HOMEWARD_WEBHOOK_SECRET;
   if (!secret) return NextResponse.json({ ok: true, sent: false, reason: "not configured" });
 
@@ -29,6 +31,8 @@ export async function POST(req: NextRequest) {
   if (!KIDS.has(kid) || !kind) {
     return NextResponse.json({ ok: false, error: "kid and kind (plan|done) required" }, { status: 400 });
   }
+  const limited = gateProxy(req, "today", kid, 30);
+  if (limited) return limited;
 
   const raw = body.lesson && typeof body.lesson === "object" ? (body.lesson as Record<string, unknown>) : null;
   const lesson = raw && str(raw.subject, 60) && str(raw.id, 120) && str(raw.title, 160)
@@ -54,6 +58,7 @@ export async function POST(req: NextRequest) {
         atSchool: typeof body.atSchool === "boolean" ? body.atSchool : undefined,
         lesson,
       }),
+      signal: AbortSignal.timeout(4000),
     });
     const data = await res.json().catch(() => ({}));
     return NextResponse.json(data, { status: res.ok ? 200 : res.status });

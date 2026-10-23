@@ -2,11 +2,15 @@
 // Academy frontend POSTs here; this function forwards to Homeward with the secret.
 
 import { NextRequest, NextResponse } from "next/server";
+import { gateProxy, sameOrigin } from "@/lib/api-gate";
 
 const HOMEWARD_URL =
   "https://homeward.echols.family/.netlify/functions/family-economy";
 
 export async function POST(req: NextRequest) {
+  // Gate only (Critic B3): same-origin + per IP/kid rate limit. Payout
+  // amounts and logic are unchanged and still decided by Homeward.
+  if (!sameOrigin(req)) return NextResponse.json({ ok: false, error: "forbidden" }, { status: 403 });
   const secret = process.env.HOMEWARD_WEBHOOK_SECRET;
   if (!secret) {
     // Not configured, return ok so the client never errors out
@@ -24,6 +28,8 @@ export async function POST(req: NextRequest) {
   if (!kid || !lessonId || typeof minutesEarned !== "number") {
     return NextResponse.json({ error: "kid, lessonId, and minutesEarned required" }, { status: 400 });
   }
+  const limited = gateProxy(req, "gig", String(kid).toLowerCase(), 12);
+  if (limited) return limited;
 
   try {
     const res = await fetch(HOMEWARD_URL, {

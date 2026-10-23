@@ -27,16 +27,20 @@ export interface TodayLesson {
 
 type Kind = "plan" | "done";
 
-function post(body: { kid: string; kind: Kind; atSchool?: boolean; lesson: TodayLesson | null }): void {
+/** Resolves true only when Homeward actually stored the report. Never throws. */
+async function post(body: { kid: string; kind: Kind; atSchool?: boolean; lesson: TodayLesson | null }): Promise<boolean> {
   try {
-    void fetch("/api/homeward-today", {
+    const res = await fetch("/api/homeward-today", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
       keepalive: true,
-    }).catch(() => {});
+    });
+    if (!res.ok) return false;
+    const data = (await res.json().catch(() => null)) as { ok?: boolean; sent?: boolean } | null;
+    return !!data && data.ok === true && data.sent !== false;
   } catch {
-    /* never fatal */
+    return false; // never fatal
   }
 }
 
@@ -55,8 +59,11 @@ export function reportPlanToHomeward(kidId: string): void {
     const sig = `${todayCT()}|${t.atSchool ? "school" : lesson ? lesson.id : "none"}`;
     const key = `hw-today-plan-${kidId}`;
     if (localStorage.getItem(key) === sig) return;
-    post({ kid: kidId, kind: "plan", atSchool: t.atSchool, lesson });
-    localStorage.setItem(key, sig);
+    // Mark as sent only after Homeward confirms, so a failed send retries next open.
+    void post({ kid: kidId, kind: "plan", atSchool: t.atSchool, lesson }).then((sent) => {
+      if (!sent) return;
+      try { localStorage.setItem(key, sig); } catch { /* ignore */ }
+    });
   } catch {
     /* storage disabled, etc: never fatal */
   }
@@ -72,7 +79,7 @@ export function reportLessonDoneToHomeward(
   if (typeof window === "undefined") return;
   try {
     const course = getCourse(kidId, subject);
-    post({
+    void post({
       kid: kidId,
       kind: "done",
       lesson: {
