@@ -11,6 +11,7 @@ import { saveResult, MASTERY_PCT } from "@/lib/curriculum-spine/results";
 import { queueSignoff } from "@/lib/curriculum-spine/signoff";
 import { reportLessonToHomeward, subjectToTitle, dailyLessonId, TIER_META, type LessonTier } from "@/lib/homeward";
 import type { SpineLesson } from "@/lib/curriculum-spine/types";
+import { reportLessonDoneToHomeward } from "@/lib/homeward-today";
 
 const TUTOR: Record<string, { name: string; emoji: string }> = {
   titus: { name: "Buck", emoji: "🎣" },
@@ -368,6 +369,7 @@ export default function TaughtLesson({ kidId, subject, lesson }: Props) {
       // Only mastery counts as "done": mark complete, earn coins, queue for Mom.
       if (pct >= MASTERY_PCT) {
         markLessonComplete(kidId, subject, lesson.id);
+        reportLessonDoneToHomeward(kidId, subject, lesson);
         queueSignoff({ kidId, subject, lessonId: lesson.id, lessonTitle: lesson.title, date, pct, correct, total });
         // Coins are minted in Homeward (the single family ledger), not locally.
         // Report the lesson with its tier; Homeward credits the coins + splits at payday.

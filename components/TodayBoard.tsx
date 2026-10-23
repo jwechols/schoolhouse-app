@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { KIDS, TRUMA_EARTHY, TRUMA_THEME } from "@/lib/kids";
 import { familyToday, type KidToday } from "@/lib/today-plan";
 import { unlockTTS } from "@/lib/tts";
+import { reportPlanToHomeward } from "@/lib/homeward-today";
 
 const META: Record<string, { name: string; emoji: string; color: string; colorDark: string }> = {
   truma: { name: "Truma", emoji: TRUMA_EARTHY.avatar, color: TRUMA_THEME.primary, colorDark: TRUMA_THEME.primaryDark },
@@ -120,8 +121,11 @@ function KidRow({ row }: { row: KidToday }) {
 export default function TodayBoard({ compact = false }: { compact?: boolean }) {
   const [rows, setRows] = useState<KidToday[] | null>(null);
   useEffect(() => {
-    setRows(familyToday());
+    const today = familyToday();
+    setRows(today);
     unlockTTS();
+    // Let Homeward show today's lesson (deduped per kid per day).
+    today.forEach((t) => reportPlanToHomeward(t.kidId));
   }, []);
   if (!rows) return <div style={{ minHeight: 120 }} />;
   return (
