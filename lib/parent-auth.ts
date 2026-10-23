@@ -8,7 +8,7 @@ export const PARENT_COOKIE = "ta-parent";
 
 export function parentPinOk(
   pin: string | undefined,
-  env: { PARENT_PIN?: string; PARENT_AUTH_ENFORCE?: string },
+  env: Record<string, string | undefined>,
 ): boolean {
   if (env.PARENT_AUTH_ENFORCE === "0") return true;
   return !!env.PARENT_PIN && pin === env.PARENT_PIN;
