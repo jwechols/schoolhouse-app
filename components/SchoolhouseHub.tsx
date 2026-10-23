@@ -31,7 +31,7 @@ export default function SchoolhouseHub({ kidId }: { kidId: string }) {
   const m = META[kidId] ?? META.titus;
   const outsideSchoolToday = isOutsideSchoolToday(kidId);
   const [rows, setRows] = useState<Row[] | null>(null);
-  const [today, setToday] = useState<{ subject: string; id: string; title: string } | null>(null);
+  const [today, setToday] = useState<{ subject: string; id: string; title: string } | null | undefined>(undefined);
   const [wordLists, setWordLists] = useState<{ total: number; memory: number }>({ total: 0, memory: 0 });
   const [testCount, setTestCount] = useState(0);
   const [readingCount, setReadingCount] = useState(0);
@@ -58,6 +58,7 @@ export default function SchoolhouseHub({ kidId }: { kidId: string }) {
     });
     setRows(rs);
     const courses = coursesForKid(kidId);
+    setToday(null); // honest "No lesson today" unless a ready lesson is found below
     for (const c of courses) {
       const p = courseProgress(c);
       if (p.current) { setToday({ subject: c.subject, id: p.current.id, title: `${c.subjectLabel}: ${p.current.title}` }); break; }
@@ -152,6 +153,12 @@ export default function SchoolhouseHub({ kidId }: { kidId: string }) {
                   <button onClick={() => go(wordsHref)} style={{ minHeight: 56, padding: "0 26px", fontSize: 18, fontWeight: 600, borderRadius: "var(--r-full)", background: "var(--accent)", color: "var(--accent-contrast)", border: "none", cursor: "pointer" }}>This week's words →</button>
                   <button onClick={() => go(catHref)} style={{ minHeight: 56, padding: "0 18px", fontSize: 15, fontWeight: 600, borderRadius: "var(--r-full)", background: "transparent", color: "var(--accent-ink)", border: "1px solid var(--border)", cursor: "pointer" }}>Catechism</button>
                 </div>
+              </div>
+            ) : today === null ? (
+              <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--r-xl)", boxShadow: "var(--sh-sm)", padding: 22, marginBottom: 20 }}>
+                <div style={{ ...eyebrow, marginBottom: 8 }}>Today's lesson</div>
+                <div style={{ fontFamily: "var(--font-display)", fontSize: 26, fontWeight: 600, lineHeight: 1.12, marginBottom: 6 }}>No Lesson Today</div>
+                <div style={{ fontSize: 14, color: "var(--text-muted)" }}>Words and catechism are ready below.</div>
               </div>
             ) : today && (
               <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderTop: "4px solid var(--accent)", borderRadius: "var(--r-xl)", boxShadow: "var(--sh-md)", padding: 22, marginBottom: 20 }}>

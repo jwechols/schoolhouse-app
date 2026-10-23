@@ -1,5 +1,6 @@
 import type { Course } from "./types";
 import { mergeCourse } from "./override-cache";
+import { readyCourse } from "./ready";
 // Titus (3rd grade)
 import { TITUS_MATH } from "./titus-math";
 import { TITUS_GRAMMAR } from "./titus-grammar";
@@ -62,15 +63,19 @@ export function getCourseRaw(kidId: string, subject: string): Course | undefined
 
 // ── Merged accessors (what the kids see) ─────────────────────────────────────
 // Briana's overrides from the cache are layered on top. When no overrides exist
-// (or the cache is empty), these return the code courses unchanged.
+// (or the cache is empty), these return the code courses. Only READY lessons are
+// returned (see ./ready.ts); outline-only lessons, units and subjects are hidden.
 export function coursesForKid(kidId: string): Course[] {
-  return coursesForKidRaw(kidId).map(mergeCourse);
+  return coursesForKidRaw(kidId)
+    .map((c) => readyCourse(mergeCourse(c)))
+    .filter((c): c is Course => c !== null);
 }
 
 export function getCourse(kidId: string, subject: string): Course | undefined {
   const c = getCourseRaw(kidId, subject);
-  return c ? mergeCourse(c) : undefined;
+  return (c && readyCourse(mergeCourse(c))) || undefined;
 }
 
 export * from "./types";
 export * from "./override-cache";
+export * from "./ready";
