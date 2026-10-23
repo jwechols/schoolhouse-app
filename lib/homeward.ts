@@ -30,13 +30,13 @@ export interface LessonReport {
   tier?: LessonTier;
 }
 
-export interface CreditResult { credited: boolean; reason?: string; /** Dollars credited (Homeward coins / 4; $2 fallback). */ dollars?: number }
+export interface CreditResult { credited: boolean; reason?: string; /** Dollars credited (Homeward coins / 4; $2 fallback). */ dollars?: number | null }
 
 /** JM's set Schoolhouse pay per lesson, used when Homeward doesn't return an amount. */
 export const DEFAULT_LESSON_DOLLARS = 2;
 
 /** "+$2 earned!" style money label. */
-export function formatDollars(d: number | undefined): string {
+export function formatDollars(d: number | null | undefined): string {
   const v = typeof d === "number" && d > 0 ? d : DEFAULT_LESSON_DOLLARS;
   return "$" + (Number.isInteger(v) ? String(v) : v.toFixed(2));
 }
@@ -65,7 +65,7 @@ export async function reportLessonToHomeward(report: LessonReport): Promise<Cred
       credited: data.credited === true,
       reason: typeof data.reason === "string" ? data.reason : undefined,
       // Homeward answers coins at 4 coins per dollar; show kids dollars.
-      dollars: typeof data.coins === "number" && data.coins > 0 ? data.coins / 4 : DEFAULT_LESSON_DOLLARS,
+      dollars: data.credited !== true ? null : typeof data.coins === "number" && data.coins > 0 ? data.coins / 4 : DEFAULT_LESSON_DOLLARS,
     };
   } catch (err) {
     // Network failure is never fatal, lesson still shows as complete

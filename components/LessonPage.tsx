@@ -10,7 +10,7 @@ import { addXP, recordSession, checkBadges } from "@/lib/progress";
 import { playCorrect, playWrong } from "@/lib/sounds";
 import { useTTS, OPENAI_VOICE } from "@/lib/tts";
 import { recordAnswer, loadMastery, getMasteryPct } from "@/lib/adaptive-learning";
-import { formatDollars, reportLessonToHomeward, dailyLessonId } from "@/lib/homeward";
+import { formatDollars, isDailyCap, reportLessonToHomeward, dailyLessonId } from "@/lib/homeward";
 
 interface Props {
   profile: KidProfile;
@@ -271,7 +271,8 @@ export default function LessonPage({ profile, curriculum }: Props) {
           lessonTitle: curriculum.subjectLabel,
         }).then((r) => {
           // Only claim gig points when Homeward actually credited them.
-          if (r?.credited === true) setHomewardMinutes(formatDollars(r.dollars));
+          if (r?.credited === true) setHomewardMinutes(`+${formatDollars(r.dollars)} earned!`);
+          else if (isDailyCap(r)) setHomewardMinutes("Lessons are done for today");
         });
       }
 
@@ -499,7 +500,7 @@ export default function LessonPage({ profile, curriculum }: Props) {
             className="font-bold mb-3 px-5 py-2 rounded-full text-base"
             style={{ backgroundColor: "#f0fdf4", border: "1.5px solid #86efac", color: "#15803d" }}
           >
-            +{homewardMinutes} earned!
+            {homewardMinutes}
           </div>
         )}
 
