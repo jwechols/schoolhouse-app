@@ -13,6 +13,7 @@ import { isOutsideSchoolToday } from "@/lib/outside-school";
 import { catechismHref } from "@/lib/today-plan";
 import { unlockTTS } from "@/lib/tts";
 import FloatingTutor from "./FloatingTutor";
+import { reportPlanToHomeward } from "@/lib/homeward-today";
 
 const META: Record<string, { name: string; grade: string; tutor: string; tutorEmoji: string; school: string }> = {
   titus: { name: "Titus", grade: "3rd Grade", tutor: "Buck", tutorEmoji: "\ud83c\udfa3", school: "Brookside Academy" },
@@ -36,6 +37,11 @@ export default function SchoolhouseHub({ kidId }: { kidId: string }) {
   const [testCount, setTestCount] = useState(0);
   const [readingCount, setReadingCount] = useState(0);
   const [showMore, setShowMore] = useState(false);
+
+  useEffect(() => {
+    // Let Homeward show today's lesson (kidToday, deduped per kid per day).
+    reportPlanToHomeward(kidId);
+  }, [kidId]);
 
   useEffect(() => {
     unlockTTS();

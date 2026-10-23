@@ -12,6 +12,7 @@ import { courseProgress, markLessonComplete } from "@/lib/curriculum-spine/progr
 import { saveResult } from "@/lib/curriculum-spine/results";
 import { courseSequence } from "@/lib/curriculum-spine/types";
 import type { SpineLesson } from "@/lib/curriculum-spine/types";
+import { reportLessonDoneToHomeward } from "@/lib/homeward-today";
 
 // Randomize choice order so the correct answer isn't always in the same slot.
 function shuffle<T>(arr: T[]): T[] {
@@ -212,6 +213,7 @@ export default function LessonConductor({ kidId, subject, durationMinutes, paren
         seconds: Math.round((Date.now() - lessonStartTime.current) / 1000),
       });
       markLessonComplete(kidId, subject, spineLessonRef.current.id);
+      reportLessonDoneToHomeward(kidId, subject, spineLessonRef.current);
     }
     // Coins are minted in Homeward (the single family ledger), not locally. The tier
     // the child picked (or the session length) sets the coins; report it so Homeward
