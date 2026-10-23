@@ -1,17 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { cookies } from "next/headers";
+import { isParent } from "@/lib/parent-auth";
 import { supabase, supabaseAdmin } from "@/lib/supabase";
 import { rowToWordList, type WordListDraft } from "@/lib/word-lists";
 
 // Briana's word lists (vocab & spelling drills). GET is public (anon SELECT
 // policy) so kid drill screens can fetch without the parent PIN. Writes
 // require the same ta-parent PIN cookie as /api/curriculum-overrides.
-
-async function isParent(): Promise<boolean> {
-  const c = await cookies();
-  const pin = c.get("ta-parent")?.value;
-  return process.env.PARENT_AUTH_ENFORCE === "0" || (!!process.env.PARENT_PIN && pin === process.env.PARENT_PIN);
-}
 
 function draftToRow(d: WordListDraft) {
   return {

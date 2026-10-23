@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { PARENT_COOKIE } from "@/lib/parent-auth";
 
 const STUDENT_COOKIE = "ta-student";
-const PARENT_COOKIE = "ta-parent";
 const KID_COOKIE = "fa-kid";
 const SEVEN_DAYS = 60 * 60 * 24 * 7;
 

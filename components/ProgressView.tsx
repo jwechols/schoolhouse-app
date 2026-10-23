@@ -26,6 +26,9 @@ export default function ProgressView() {
   const [stats, setStats] = useState<TrumaStats>(DEFAULT_STATS);
   const [sessions, setSessions] = useState<TrumaSession[]>([]);
   const [sessionsLoading, setSessionsLoading] = useState(true);
+  // GET /api/session is parent-only; a 401 means "not a signed-in parent",
+  // which must not read as "no sessions".
+  const [parentsOnly, setParentsOnly] = useState(false);
 
   useEffect(() => {
     setStats(loadStats());
@@ -33,9 +36,15 @@ export default function ProgressView() {
 
   useEffect(() => {
     fetch("/api/session?limit=10")
-      .then((r) => r.json())
+      .then((r) => {
+        if (r.status === 401) {
+          setParentsOnly(true);
+          return null;
+        }
+        return r.json();
+      })
       .then((data) => {
-        if (data.sessions) setSessions(data.sessions);
+        if (data?.sessions) setSessions(data.sessions);
       })
       .catch(() => {})
       .finally(() => setSessionsLoading(false));
@@ -197,6 +206,13 @@ export default function ProgressView() {
         </h2>
         {sessionsLoading ? (
           <p className="text-stone text-sm">Loading…</p>
+        ) : parentsOnly ? (
+          <div className="bg-bone rounded-sm p-4 text-center">
+            <p className="text-navy text-sm font-semibold">Parents only</p>
+            <p className="text-stone text-sm mt-1">
+              Recent sessions show here once a parent signs in with the parent PIN.
+            </p>
+          </div>
         ) : sessions.length === 0 ? (
           <div className="bg-bone rounded-sm p-4 text-center">
             <p className="text-stone text-sm">No sessions recorded yet. Start practicing!</p>

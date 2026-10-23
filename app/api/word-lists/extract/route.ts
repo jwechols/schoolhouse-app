@@ -1,14 +1,8 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { NextRequest, NextResponse } from "next/server";
-import { cookies } from "next/headers";
+import { isParent } from "@/lib/parent-auth";
 
 export const runtime = "nodejs";
-
-async function isParent(): Promise<boolean> {
-  const c = await cookies();
-  const pin = c.get("ta-parent")?.value;
-  return process.env.PARENT_AUTH_ENFORCE === "0" || (!!process.env.PARENT_PIN && pin === process.env.PARENT_PIN);
-}
 
 type ExtractType = "vocab" | "spelling" | "memory" | "facts";
 
