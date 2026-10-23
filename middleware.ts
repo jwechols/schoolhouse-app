@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { PARENT_COOKIE, parentPinOk } from "@/lib/parent-auth";
 
-export function middleware(req: NextRequest) {
+export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
   if (
@@ -17,7 +17,7 @@ export function middleware(req: NextRequest) {
   // and it renders the Teacher Station with parent-level info. It must be gated
   // the same as /parent, not just the PIN prompt in front of it.
   if (pathname.startsWith("/parent") || pathname.startsWith("/teacher")) {
-    if (!parentPinOk(req.cookies.get(PARENT_COOKIE)?.value, process.env)) {
+    if (!(await parentPinOk(req.cookies.get(PARENT_COOKIE)?.value, process.env))) {
       const url = req.nextUrl.clone();
       url.pathname = "/";
       return NextResponse.redirect(url);

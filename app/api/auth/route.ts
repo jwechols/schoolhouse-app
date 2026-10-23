@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { PARENT_COOKIE } from "@/lib/parent-auth";
+import { PARENT_COOKIE, pinEquals } from "@/lib/parent-auth";
 
 const STUDENT_COOKIE = "ta-student";
 const KID_COOKIE = "fa-kid";
@@ -18,7 +18,7 @@ function cookieOpts() {
 export async function POST(req: NextRequest) {
   const { pin, mode, kidId } = await req.json();
 
-  const isParent = mode === "parent" && pin === process.env.PARENT_PIN;
+  const isParent = mode === "parent" && (await pinEquals(pin, process.env.PARENT_PIN));
   const isStudent = mode === "student" && pin === process.env.TRUMA_PIN;
 
   let isKid = false;

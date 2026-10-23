@@ -3,7 +3,7 @@
 import assert from "node:assert/strict";
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
-import { parentPinOk, PARENT_COOKIE } from "../lib/parent-auth.ts";
+import { parentPinOk, pinEquals, PARENT_COOKIE } from "../lib/parent-auth.ts";
 import { rateLimitOk, clientIp } from "../lib/rate-limit.ts";
 
 const root = new URL("..", import.meta.url).pathname;
@@ -12,15 +12,30 @@ const read = (p) => readFileSync(join(root, p), "utf8");
 // 1) The rule.
 const env = { PARENT_PIN: "1234" };
 assert.equal(PARENT_COOKIE, "ta-parent");
-assert.equal(parentPinOk(undefined, env), false, "no cookie -> denied");
-assert.equal(parentPinOk("", env), false, "empty cookie -> denied");
-assert.equal(parentPinOk("9999", env), false, "wrong PIN -> denied");
-assert.equal(parentPinOk("1234", env), true, "parent PIN -> allowed");
-assert.equal(parentPinOk("1234", { ...env, PARENT_AUTH_ENFORCE: "1" }), true, "enforce=1 + PIN -> allowed");
-assert.equal(parentPinOk(undefined, { ...env, PARENT_AUTH_ENFORCE: "1" }), false, "enforce=1, no cookie -> denied");
-assert.equal(parentPinOk(undefined, {}), false, "PARENT_PIN unset -> denied (fail closed)");
-assert.equal(parentPinOk(undefined, { PARENT_AUTH_ENFORCE: "0" }), true, "enforce=0 -> open (prod today, unchanged)");
-assert.equal(parentPinOk(undefined, { PARENT_AUTH_ENFORCE: "0", PARENT_PIN: "1234" }), true, "enforce=0 -> open even with PIN set");
+assert.equal(await parentPinOk(undefined, env), false, "no cookie -> denied");
+assert.equal(await parentPinOk("", env), false, "empty cookie -> denied");
+assert.equal(await parentPinOk("9999", env), false, "wrong PIN -> denied");
+assert.equal(await parentPinOk("1234", env), true, "parent PIN -> allowed");
+assert.equal(await parentPinOk("1234", { ...env, PARENT_AUTH_ENFORCE: "1" }), true, "enforce=1 + PIN -> allowed");
+assert.equal(await parentPinOk(undefined, { ...env, PARENT_AUTH_ENFORCE: "1" }), false, "enforce=1, no cookie -> denied");
+assert.equal(await parentPinOk(undefined, {}), false, "PARENT_PIN unset -> denied (fail closed)");
+assert.equal(await parentPinOk(undefined, { PARENT_AUTH_ENFORCE: "0" }), true, "enforce=0 -> open (prod today, unchanged)");
+assert.equal(await parentPinOk(undefined, { PARENT_AUTH_ENFORCE: "0", PARENT_PIN: "1234" }), true, "enforce=0 -> open even with PIN set");
+
+// 1b) Constant-time compare: no === on the PIN, digests XOR'd with no early return.
+assert.equal(await pinEquals("1234", "1234"), true, "same PIN -> equal");
+assert.equal(await pinEquals("1235", "1234"), false, "different PIN -> not equal");
+assert.equal(await pinEquals("12345", "1234"), false, "longer PIN -> not equal");
+assert.equal(await pinEquals("", ""), false, "empty expected -> fail closed");
+assert.equal(await pinEquals(undefined, undefined), false, "unset expected -> fail closed");
+assert.equal(await pinEquals("", undefined), false, "empty vs unset -> fail closed");
+assert.equal(await pinEquals(1234, "1234"), false, "non-string PIN (JSON number) -> not equal");
+const pa = read("lib/parent-auth.ts");
+assert.ok(/crypto\.subtle\.digest\("SHA-256"/.test(pa) && /diff \|= x\[i\] \^ y\[i\]/.test(pa), "pinEquals hashes then XORs");
+assert.ok(!/pin === env\.PARENT_PIN/.test(pa), "parentPinOk has no === PIN compare");
+const authSrc = read("app/api/auth/route.ts");
+assert.ok(/pinEquals\(pin, process\.env\.PARENT_PIN\)/.test(authSrc) && !/pin === process\.env\.PARENT_PIN/.test(authSrc), "/api/auth parent compare is constant-time");
+assert.ok(/await parentPinOk\(/.test(read("middleware.ts")), "middleware awaits the async gate");
 
 // 2) No inline copies left: every parent check goes through lib/parent-auth.
 function walk(dir, out = []) {
