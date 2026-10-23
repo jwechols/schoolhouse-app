@@ -1,17 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { cookies } from "next/headers";
+import { isParent } from "@/lib/parent-auth";
 import { supabase, supabaseAdmin } from "@/lib/supabase";
 import type { LessonOverride } from "@/lib/curriculum-spine/override-cache";
 
 // Briana's lesson overrides. All methods require the parent PIN cookie (the same
 // gate as the /parent dashboard). Reads use the anon/service client; writes
 // require the service role (there is no anon write policy on the table).
-
-async function isParent(): Promise<boolean> {
-  const c = await cookies();
-  const pin = c.get("ta-parent")?.value;
-  return process.env.PARENT_AUTH_ENFORCE === "0" || (!!process.env.PARENT_PIN && pin === process.env.PARENT_PIN);
-}
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function rowToOverride(r: any): LessonOverride {

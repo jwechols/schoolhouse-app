@@ -1,14 +1,12 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { NextRequest, NextResponse } from "next/server";
-import { cookies } from "next/headers";
+import { isParent } from "@/lib/parent-auth";
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! });
 
 export async function POST(req: NextRequest) {
   // Require parent PIN
-  const cookieStore = await cookies();
-  const parentPin = cookieStore.get("ta-parent")?.value;
-  if (process.env.PARENT_AUTH_ENFORCE !== "0" && parentPin !== process.env.PARENT_PIN) {
+  if (!(await isParent())) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
