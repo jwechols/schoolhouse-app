@@ -1,2 +1,2 @@
 // AUTO-GENERATED at build by scripts/gen-version.mjs. Do not edit by hand.
-export const APP_VERSION = "edba04d";
+export const APP_VERSION = "d6d1de1";
