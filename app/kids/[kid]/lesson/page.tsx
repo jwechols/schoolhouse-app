@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { coursesForKid } from "@/lib/curriculum-spine";
 import type { Metadata } from "next";
 import { KIDS, type KidId } from "@/lib/kids";
 import LessonRouter from "@/components/LessonRouter";
@@ -21,7 +22,7 @@ export default async function KidLessonPage({ params, searchParams }: Props) {
   if (!profile) notFound();
 
   const sp = await searchParams;
-  const subject = sp.subject ?? profile.subjects[0] ?? "math";
+  const subject = sp.subject ?? coursesForKid(kid)[0]?.subject ?? profile.subjects[0] ?? "math";
   const duration = parseInt(sp.duration ?? "30", 10);
   const notes = sp.notes ?? "";
 

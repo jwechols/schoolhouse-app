@@ -56,6 +56,10 @@ export default function LessonRouter({ kidId, subject, parentNotes, lessonId }: 
 
   if (lesson === undefined) return null; // resolving (one tick)
 
+  // Hidden (outline-only) or unknown lesson: never start it. Show the subject's
+  // ready lessons, or LessonContents' honest "No lessons here yet" state.
+  if (lesson === null) return <LessonContents kidId={kidId} subject={subject} />;
+
   // Authored interactive/quiz lesson: fixed experience, coins by its own tier.
   if (lesson && lesson.quiz && lesson.quiz.length > 0) {
     return <TaughtLesson kidId={kidId} subject={subject} lesson={lesson} />;
