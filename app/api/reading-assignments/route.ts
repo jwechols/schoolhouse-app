@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { cookies } from "next/headers";
+import { isParent } from "@/lib/parent-auth";
 import { supabase, supabaseAdmin } from "@/lib/supabase";
 import { rowToReadingAssignment, type ReadingAssignmentDraft, type ReadingStatus } from "@/lib/reading-assignments";
 
@@ -8,12 +8,6 @@ import { rowToReadingAssignment, type ReadingAssignmentDraft, type ReadingStatus
 // approve, pause/resume, delete) require the ta-parent PIN cookie, same as
 // word-lists and practice-tests. The kid's one write (submit) is a SEPARATE,
 // narrower route: /api/reading-assignments/submit.
-
-async function isParent(): Promise<boolean> {
-  const c = await cookies();
-  const pin = c.get("ta-parent")?.value;
-  return process.env.PARENT_AUTH_ENFORCE === "0" || (!!process.env.PARENT_PIN && pin === process.env.PARENT_PIN);
-}
 
 function draftToRow(d: ReadingAssignmentDraft & { status?: ReadingStatus }) {
   return {
