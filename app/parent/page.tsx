@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { cookies } from "next/headers";
+import { isParent } from "@/lib/parent-auth";
 import { redirect } from "next/navigation";
 import { supabaseAdmin } from "@/lib/supabase";
 import type { TrumaSession } from "@/lib/supabase";
@@ -9,9 +9,7 @@ import ParentDeskBar from "@/components/ParentDeskBar";
 export const metadata: Metadata = { title: "Mom desk | Schoolhouse" };
 
 export default async function ParentPage() {
-  const cookieStore = await cookies();
-  const parentPin = cookieStore.get("ta-parent")?.value;
-  if (process.env.PARENT_AUTH_ENFORCE !== "0" && parentPin !== process.env.PARENT_PIN) {
+  if (!(await isParent())) {
     redirect("/?mode=parent");
   }
 

@@ -1,6 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { NextRequest, NextResponse } from "next/server";
-import { cookies } from "next/headers";
+import { isParent } from "@/lib/parent-auth";
 import { getCourseRaw } from "@/lib/curriculum-spine";
 import { TUTOR_VOICE } from "@/lib/tutor-personas";
 import { FAMILY_CONVICTIONS, REFORMED_DISCIPLESHIP } from "@/lib/tutor-guardrails";
@@ -11,12 +11,6 @@ import { FAMILY_CONVICTIONS, REFORMED_DISCIPLESHIP } from "@/lib/tutor-guardrail
 // she reviews and saves; nothing is stored here.
 
 export const runtime = "nodejs";
-
-async function isParent(): Promise<boolean> {
-  const c = await cookies();
-  const pin = c.get("ta-parent")?.value;
-  return process.env.PARENT_AUTH_ENFORCE === "0" || (!!process.env.PARENT_PIN && pin === process.env.PARENT_PIN);
-}
 
 // Forces the model to return a lesson in the SpineLesson shape.
 const SAVE_LESSON_TOOL: Anthropic.Tool = {
