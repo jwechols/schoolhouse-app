@@ -8,7 +8,7 @@ import {
   type ReadingAssignment,
   type ReadingMethod,
 } from "@/lib/reading-assignments";
-import { reportLessonToHomeward, TIER_META } from "@/lib/homeward";
+import { formatDollars, isDailyCap, reportLessonToHomeward, TIER_META } from "@/lib/homeward";
 import type { PracticeQuestion } from "@/lib/practice-tests";
 
 // ── Briana's reading assignment builder ───────────────────────────────────────
@@ -177,7 +177,7 @@ export default function ReadingAssignmentEditor() {
       return;
     }
     // Same credit path every other lesson/drill/test uses.
-    await reportLessonToHomeward({
+    const credit = await reportLessonToHomeward({
       kid: a.kidId,
       subject: "reading",
       lessonId: a.id,
@@ -185,7 +185,8 @@ export default function ReadingAssignmentEditor() {
       lessonTitle: a.title,
       tier: "standard",
     });
-    flash(`Approved. ${KIDS.find((k) => k.id === a.kidId)?.name ?? a.kidId} earned credit.`);
+    const who = KIDS.find((k) => k.id === a.kidId)?.name ?? a.kidId;
+    flash(credit?.credited === true ? `Approved. ${who} earned +${formatDollars(credit.dollars)}.` : isDailyCap(credit) ? `Approved. ${who}: lessons are done for today, no credit.` : `Approved. No Homeward credit for ${who}.`);
     reload();
   }
 

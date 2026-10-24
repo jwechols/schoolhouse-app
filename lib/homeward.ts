@@ -30,7 +30,25 @@ export interface LessonReport {
   tier?: LessonTier;
 }
 
-export async function reportLessonToHomeward(report: LessonReport): Promise<void> {
+export interface CreditResult { credited: boolean; reason?: string; /** Dollars credited (Homeward coins / 4; $2 fallback). */ dollars?: number | null }
+
+/** JM's set Schoolhouse pay per lesson, used when Homeward doesn't return an amount. */
+export const DEFAULT_LESSON_DOLLARS = 2;
+
+/** "+$2 earned!" style money label. */
+export function formatDollars(d: number | null | undefined): string {
+  const v = typeof d === "number" && d > 0 ? d : DEFAULT_LESSON_DOLLARS;
+  return "$" + (Number.isInteger(v) ? String(v) : v.toFixed(2));
+}
+
+/** True when Homeward refused credit because the kid hit the daily lesson cap
+ *  (Homeward #427 reason: "daily lesson cap reached"). Tolerant match. */
+export function isDailyCap(r: CreditResult | null | undefined): boolean {
+  return !!r && r.credited !== true && /cap/i.test(String(r.reason ?? ""));
+}
+
+/** Returns Homeward's verdict, or null on network error / non-ok. Never throws. */
+export async function reportLessonToHomeward(report: LessonReport): Promise<CreditResult | null> {
   try {
     const res = await fetch("/api/homeward-gig", {
       method: "POST",
@@ -39,10 +57,20 @@ export async function reportLessonToHomeward(report: LessonReport): Promise<void
     });
     if (!res.ok) {
       console.warn("[homeward] gig proxy returned", res.status);
+      return null;
     }
+    const data = (await res.json().catch(() => null)) as { credited?: unknown; reason?: unknown; coins?: unknown } | null;
+    if (!data || typeof data !== "object") return null;
+    return {
+      credited: data.credited === true,
+      reason: typeof data.reason === "string" ? data.reason : undefined,
+      // Homeward answers coins at 4 coins per dollar; show kids dollars.
+      dollars: data.credited !== true ? null : typeof data.coins === "number" && data.coins > 0 ? data.coins / 4 : DEFAULT_LESSON_DOLLARS,
+    };
   } catch (err) {
     // Network failure is never fatal, lesson still shows as complete
     console.warn("[homeward] gig proxy failed:", err);
+    return null;
   }
 }
 

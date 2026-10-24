@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { OPENAI_VOICE, useTTS } from "@/lib/tts";
-import { reportLessonToHomeward, TIER_META } from "@/lib/homeward";
+import { formatDollars, isDailyCap, reportLessonToHomeward, type CreditResult, TIER_META } from "@/lib/homeward";
 import { MASTERY_PCT } from "@/lib/curriculum-spine/results";
 import type { WordList } from "@/lib/word-lists";
 
@@ -30,6 +30,7 @@ export default function WordDrill({ kidId, list, onDone }: Props) {
   const [chosen, setChosen] = useState<string | null>(null);
   const [typed, setTyped] = useState("");
   const [reported, setReported] = useState(false);
+  const [credit, setCredit] = useState<CreditResult | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const current = list.words[index];
@@ -83,7 +84,7 @@ export default function WordDrill({ kidId, list, onDone }: Props) {
         minutesEarned: TIER_META.quick.minutes,
         lessonTitle: list.title,
         tier: "quick",
-      });
+      }).then(setCredit);
     }
   }, [phase, reported, mastered, kidId, list.id, list.type, list.title]);
 
@@ -96,7 +97,7 @@ export default function WordDrill({ kidId, list, onDone }: Props) {
           <div style={{ fontFamily: "var(--font-display)", fontSize: 30, fontWeight: 600 }}>{correctCount} / {list.words.length}</div>
           <p style={{ color: "var(--text-muted)", marginTop: 4 }}>{pct}% on {list.title}</p>
           {mastered ? (
-            <p style={{ marginTop: 12, color: "var(--success-ink)", fontWeight: 600 }}>Nice work. That earned a quick credit in Homeward.</p>
+            <p style={{ marginTop: 12, color: "var(--success-ink)", fontWeight: 600 }}>{credit?.credited === true ? `Nice work! +${formatDollars(credit.dollars)} earned!` : isDailyCap(credit) ? "Lessons are done for today" : "Lesson done!"}</p>
           ) : (
             <p style={{ marginTop: 12, color: "var(--text-muted)" }}>Needs {MASTERY_PCT}% to earn credit. Try it again?</p>
           )}

@@ -10,7 +10,7 @@ import { addXP, recordSession, checkBadges } from "@/lib/progress";
 import { playCorrect, playWrong } from "@/lib/sounds";
 import { useTTS, OPENAI_VOICE } from "@/lib/tts";
 import { recordAnswer, loadMastery, getMasteryPct } from "@/lib/adaptive-learning";
-import { reportLessonToHomeward, dailyLessonId } from "@/lib/homeward";
+import { formatDollars, isDailyCap, reportLessonToHomeward, dailyLessonId } from "@/lib/homeward";
 
 interface Props {
   profile: KidProfile;
@@ -99,7 +99,7 @@ export default function LessonPage({ profile, curriculum }: Props) {
 
   // Lesson timer, for Homeward gig credit (minutes actually spent learning)
   const startedAtRef = useRef<number>(Date.now());
-  const [homewardMinutes, setHomewardMinutes] = useState<number | null>(null);
+  const [homewardMinutes, setHomewardMinutes] = useState<string | null>(null);
 
   // ── Fetch AI-generated questions ──────────────────────────────────────────
 
@@ -263,13 +263,16 @@ export default function LessonPage({ profile, curriculum }: Props) {
       // one credit per subject per day), we just report honestly.
       const minutes = Math.round((Date.now() - startedAtRef.current) / 60000);
       if (minutes >= 1) {
-        setHomewardMinutes(minutes);
         reportLessonToHomeward({
           kid: profile.id,
           subject: curriculum.subjectId,
           lessonId: dailyLessonId(profile.id, curriculum.subjectId),
           minutesEarned: minutes,
           lessonTitle: curriculum.subjectLabel,
+        }).then((r) => {
+          // Only claim gig points when Homeward actually credited them.
+          if (r?.credited === true) setHomewardMinutes(`+${formatDollars(r.dollars)} earned!`);
+          else if (isDailyCap(r)) setHomewardMinutes("Lessons are done for today");
         });
       }
 
@@ -492,12 +495,12 @@ export default function LessonPage({ profile, curriculum }: Props) {
         )}
 
         {/* Homeward gig credit, learning minutes become points (TV time or payday money) */}
-        {homewardMinutes !== null && homewardMinutes >= 5 && (
+        {homewardMinutes && (
           <div
             className="font-bold mb-3 px-5 py-2 rounded-full text-base"
             style={{ backgroundColor: "#f0fdf4", border: "1.5px solid #86efac", color: "#15803d" }}
           >
-            🎓 {homewardMinutes} min of gig points earned in Homeward!
+            {homewardMinutes}
           </div>
         )}
 
